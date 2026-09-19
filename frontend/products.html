@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Products — Simple E-commerce Store</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/products.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="nav-brand" href="index.html">Simple E-commerce Store</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="products.html" class="active">Products</a></li>
+        <li><a href="#" class="disabled">Login</a></li>
+        <li><a href="#" class="disabled">Register</a></li>
+        <li><a href="#" class="disabled">Cart</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-header">
+      <h1>Products</h1>
+      <p>Browse our collection of products.</p>
+    </div>
+
+    <div id="products-container">
+      <div class="loading" id="loading">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading products...</p>
+      </div>
+
+      <div class="empty-state" id="empty-state" style="display: none;">
+        <h2>No products available</h2>
+        <p>Check back later for new products.</p>
+      </div>
+
+      <div class="error-state" id="error-state" style="display: none;">
+        <h2>Unable to load products</h2>
+        <p>There was a problem fetching products from the server.</p>
+        <button class="btn btn-secondary" id="retry-btn">Retry</button>
+      </div>
+
+      <div class="products-grid" id="products-grid" style="display: none;"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Simple E-commerce Store</p>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/products.js"></script>
+</body>
+</html>
