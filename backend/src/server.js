@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const healthRoutes = require("./routes/health.routes");
+const productRoutes = require("./routes/product.routes");
 const errorMiddleware = require("./middleware/error.middleware");
 const pool = require("./config/database");
 
@@ -19,6 +20,7 @@ app.use(
 app.use(express.json());
 
 app.use("/api", healthRoutes);
+app.use("/api/products", productRoutes);
 
 app.use(errorMiddleware);
 

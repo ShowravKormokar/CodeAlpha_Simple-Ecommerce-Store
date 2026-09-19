@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 02 — PostgreSQL Schema, Tables & Seed Data
+Phase 03 — Product REST API
 
 ## Stack
 
@@ -38,11 +38,14 @@ simple-ecommerce-store/
 │   │   ├── config/
 │   │   │   └── database.js
 │   │   ├── routes/
-│   │   │   └── health.routes.js
+│   │   │   ├── health.routes.js
+│   │   │   └── product.routes.js
 │   │   ├── controllers/
-│   │   │   └── health.controller.js
+│   │   │   ├── health.controller.js
+│   │   │   └── product.controller.js
 │   │   ├── services/
-│   │   │   └── health.service.js
+│   │   │   ├── health.service.js
+│   │   │   └── product.service.js
 │   │   └── middleware/
 │   │       └── error.middleware.js
 │   ├── database/
@@ -148,13 +151,94 @@ Returns:
 }
 ```
 
+### Get All Products
+
+```http
+GET /api/products
+```
+
+Returns all products from the `products` table ordered by `id ASC`.
+
+Success response (`200 OK`):
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Wireless Mouse",
+      "description": "A simple wireless mouse.",
+      "price": 25.99,
+      "image_url": "https://example.com/images/wireless-mouse.jpg",
+      "stock_quantity": 25
+    }
+  ]
+}
+```
+
+An empty list returns `200 OK` with `"data": []`.
+
+### Get Product by ID
+
+```http
+GET /api/products/:id
+```
+
+Success response (`200 OK`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Wireless Mouse",
+    "description": "A simple wireless mouse.",
+    "price": 25.99,
+    "image_url": "https://example.com/images/wireless-mouse.jpg",
+    "stock_quantity": 25
+  }
+}
+```
+
+### Error Responses
+
+Invalid product ID (`400 Bad Request`):
+
+```json
+{
+  "success": false,
+  "message": "Invalid product ID"
+}
+```
+
+Product not found (`404 Not Found`):
+
+```json
+{
+  "success": false,
+  "message": "Product not found"
+}
+```
+
+Unexpected server/database error (`500 Internal Server Error`):
+
+```json
+{
+  "success": false,
+  "message": "Internal server error"
+}
+```
+
 ## Current Status
 
-Phase 02 implements the PostgreSQL schema and seed data:
+Phase 03 implements the Product REST API:
 
-- Core tables: `users`, `products`, `orders`, `order_items`
-- Primary keys, foreign keys, unique constraints, and check constraints
-- 12 sample products seeded
+- `GET /api/products` — returns all products
+- `GET /api/products/:id` — returns a single product
+- Layered architecture: Route → Controller → Service → PostgreSQL
+- Parameterized SQL queries with explicit columns
+- Proper HTTP status codes and consistent JSON responses
 - Existing health endpoint still works
 
-Future phases will add product REST APIs, user authentication, shopping cart, and order processing.
+Future phases will add product listing/details frontend, user authentication, shopping cart, and order processing.
