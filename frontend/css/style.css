@@ -1,0 +1,60 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+.container {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  width: 100%;
+  max-width: 600px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+.status-card {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: #fafafa;
+}
+
+.status-card h2 {
+  margin-bottom: 10px;
+  font-size: 1.2em;
+  color: #34495e;
+}
+
+.status-card p {
+  font-size: 1em;
+  color: #555;
+}
+
+.status-card p.success {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.status-card p.error {
+  color: #e74c3c;
+  font-weight: bold;
+}
