@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 03 — Product REST API
+Phase 04 — Product Listing & Product Details Frontend
 
 ## Stack
 
@@ -24,12 +24,17 @@ Database:
 simple-ecommerce-store/
 ├── frontend/
 │   ├── index.html
+│   ├── products.html
+│   ├── product-details.html
 │   ├── css/
-│   │   └── style.css
+│   │   ├── style.css
+│   │   ├── products.css
+│   │   └── product-details.css
 │   ├── js/
 │   │   ├── app.js
 │   │   ├── api.js
-│   │   └── health.js
+│   │   ├── products.js
+│   │   └── product-details.js
 │   └── assets/
 │       └── images/
 ├── backend/
@@ -230,15 +235,65 @@ Unexpected server/database error (`500 Internal Server Error`):
 }
 ```
 
+## Phase 04 — Product Frontend
+
+### Products Page
+
+`products.html` displays a responsive grid of product cards. Each card is rendered dynamically from `GET /api/products` and shows:
+
+- Product image (with fallback for broken images)
+- Product name
+- Short description
+- Price (formatted as `$XX.XX`)
+- Stock status (`In stock: N` or `Out of stock`)
+- "View Details" button linking to `product-details.html?id=<id>`
+
+### Product Details Page
+
+`product-details.html?id=<id>` reads the product ID from the URL query string and renders full product information from `GET /api/products/:id`. The page displays:
+
+- Product image
+- Product name
+- Full description
+- Price
+- Stock quantity with availability status
+- "Add to Cart" button (disabled — cart functionality is not yet implemented)
+- "Back to Products" link
+
+### Frontend API Integration
+
+`frontend/js/api.js` centralizes the backend base URL and provides:
+
+```js
+getProducts()
+getProductById(id)
+```
+
+These functions handle HTTP status codes and return the JSON response from the backend.
+
+### States
+
+- **Loading:** spinner shown while the API request is in progress
+- **Error:** user-friendly message with a "Retry" button if the API request fails
+- **Empty:** "No products available" shown when the API returns an empty array
+- **Not found:** "Product not found" shown when a product ID returns 404
+- **Invalid:** "Invalid product" shown when the URL contains no valid product ID
+
+### API Endpoints Used
+
+```http
+GET /api/products
+GET /api/products/:id
+```
+
 ## Current Status
 
-Phase 03 implements the Product REST API:
+Phase 04 implements the product listing and product details frontend:
 
-- `GET /api/products` — returns all products
-- `GET /api/products/:id` — returns a single product
-- Layered architecture: Route → Controller → Service → PostgreSQL
-- Parameterized SQL queries with explicit columns
-- Proper HTTP status codes and consistent JSON responses
-- Existing health endpoint still works
+- `products.html` with responsive product grid
+- `product-details.html` with full product information
+- Dynamic rendering from the Express API (no hard-coded data)
+- Loading, error, empty, and not-found states
+- Navigation across home, products, and product details pages
 
-Future phases will add product listing/details frontend, user authentication, shopping cart, and order processing.
+Future phases will add user authentication, shopping cart, and order processing.
