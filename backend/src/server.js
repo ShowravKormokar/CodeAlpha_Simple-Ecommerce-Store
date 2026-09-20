@@ -11,9 +11,23 @@ const pool = require("./config/database");
 
 const app = express();
 
+function buildCorsOrigins() {
+  const configured = (process.env.CORS_ORIGIN || "http://localhost:5500")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const extra = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+  ];
+
+  return Array.from(new Set([...configured, ...extra]));
+}
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5500",
+    origin: buildCorsOrigins(),
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

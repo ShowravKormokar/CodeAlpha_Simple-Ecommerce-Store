@@ -1,4 +1,17 @@
-const API_BASE_URL = "http://localhost:5000/api";
+// Backend port is configured in backend/.env (PORT).
+// The API base URL is derived from the frontend's own origin so the
+// app works whether the frontend is served from localhost or 127.0.0.1.
+const BACKEND_PORT = 8000;
+
+function buildApiBaseUrl() {
+  if (typeof window !== "undefined" && window.location) {
+    const { hostname } = window.location;
+    return `http://${hostname}:${BACKEND_PORT}/api`;
+  }
+  return `http://localhost:${BACKEND_PORT}/api`;
+}
+
+const API_BASE_URL = buildApiBaseUrl();
 
 export default API_BASE_URL;
 
