@@ -1,4 +1,5 @@
 import { getProducts } from "./api.js";
+import * as cart from "./cart.js";
 
 const productsGrid = document.getElementById("products-grid");
 const loadingEl = document.getElementById("loading");
@@ -68,22 +69,55 @@ function renderProducts(products) {
     stock.className = "product-stock";
     stock.textContent = formatStock(product.stock_quantity);
 
-    const link = document.createElement("a");
-    link.className = "btn btn-primary";
-    link.href = `product-details.html?id=${product.id}`;
-    link.textContent = "View Details";
+    const viewLink = document.createElement("a");
+    viewLink.className = "btn btn-secondary";
+    viewLink.href = `product-details.html?id=${product.id}`;
+    viewLink.textContent = "View Details";
+
+    const stockNum = Number(product.stock_quantity);
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary";
+    addBtn.type = "button";
+    if (stockNum <= 0) {
+      addBtn.disabled = true;
+      addBtn.textContent = "Out of stock";
+    } else {
+      addBtn.textContent = "Add to Cart";
+      addBtn.addEventListener("click", () => handleAddToCart(product, addBtn));
+    }
 
     body.appendChild(name);
     body.appendChild(desc);
     body.appendChild(price);
     body.appendChild(stock);
-    body.appendChild(link);
+    body.appendChild(viewLink);
+    body.appendChild(addBtn);
 
     card.appendChild(img);
     card.appendChild(body);
 
     productsGrid.appendChild(card);
   });
+}
+
+function handleAddToCart(product, btn) {
+  const stockNum = Number(product.stock_quantity);
+  if (stockNum <= 0) return;
+
+  const existingQty = cart.getQuantity(product.id);
+  if (existingQty >= stockNum) {
+    alert(`Only ${stockNum} available in stock.`);
+    return;
+  }
+
+  cart.addToCart(product.id, 1);
+  const originalText = btn.textContent;
+  btn.textContent = "✓ Added";
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }, 1200);
 }
 
 function formatPrice(value) {

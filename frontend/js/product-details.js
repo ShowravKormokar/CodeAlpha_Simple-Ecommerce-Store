@@ -1,4 +1,5 @@
 import { getProductById } from "./api.js";
+import * as cart from "./cart.js";
 
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error-state");
@@ -11,6 +12,13 @@ const detailName = document.getElementById("detail-name");
 const detailPrice = document.getElementById("detail-price");
 const detailDescription = document.getElementById("detail-description");
 const detailStock = document.getElementById("detail-stock");
+
+const qtyDec = document.getElementById("qty-dec");
+const qtyInput = document.getElementById("qty-input");
+const qtyInc = document.getElementById("qty-inc");
+const addToCartBtn = document.getElementById("add-to-cart");
+
+let currentProduct = null;
 
 function showLoading() {
   loadingEl.style.display = "block";
@@ -59,6 +67,24 @@ function showDetails(product) {
   detailDescription.textContent = product.description || "";
   detailStock.textContent = formatStock(product.stock_quantity);
   detailStock.className = "detail-stock " + stockClass(product.stock_quantity);
+
+  currentProduct = product;
+
+  const stockNum = Number(product.stock_quantity);
+  qtyInput.value = 1;
+  qtyInput.max = String(stockNum > 0 ? stockNum : 1);
+
+  if (stockNum <= 0) {
+    addToCartBtn.disabled = true;
+    addToCartBtn.textContent = "Out of stock";
+    qtyInc.disabled = true;
+    qtyDec.disabled = true;
+  } else {
+    addToCartBtn.disabled = false;
+    addToCartBtn.textContent = "Add to Cart";
+    qtyInc.disabled = false;
+    qtyDec.disabled = false;
+  }
 }
 
 function formatPrice(value) {
@@ -78,6 +104,59 @@ function stockClass(quantity) {
   if (Number.isNaN(num) || num <= 0) return "out-of-stock";
   return "in-stock";
 }
+
+function updateQtyButtons() {
+  const val = Number(qtyInput.value);
+  const max = Number(qtyInput.max);
+  qtyDec.disabled = val <= 1;
+  qtyInc.disabled = val >= max;
+}
+
+qtyDec.addEventListener("click", () => {
+  const val = Math.max(1, Number(qtyInput.value) - 1);
+  qtyInput.value = String(val);
+  updateQtyButtons();
+});
+
+qtyInc.addEventListener("click", () => {
+  const val = Math.min(Number(qtyInput.max), Number(qtyInput.value) + 1);
+  qtyInput.value = String(val);
+  updateQtyButtons();
+});
+
+qtyInput.addEventListener("input", () => {
+  const max = Number(qtyInput.max);
+  let val = Number(qtyInput.value);
+  if (Number.isNaN(val) || val < 1) val = 1;
+  if (val > max) val = max;
+  qtyInput.value = String(val);
+  updateQtyButtons();
+});
+
+addToCartBtn.addEventListener("click", () => {
+  if (!currentProduct) return;
+  const stockNum = Number(currentProduct.stock_quantity);
+  if (stockNum <= 0) return;
+
+  const quantity = Number(qtyInput.value);
+  if (!Number.isInteger(quantity) || quantity < 1) return;
+
+  const existingQty = cart.getQuantity(currentProduct.id);
+  const newTotal = existingQty + quantity;
+  if (newTotal > stockNum) {
+    alert(`Only ${stockNum} available in stock.`);
+    qtyInput.value = String(Math.max(1, stockNum - existingQty));
+    updateQtyButtons();
+    return;
+  }
+
+  cart.addToCart(currentProduct.id, quantity);
+  const count = cart.getCartItemCount();
+  addToCartBtn.textContent = `✓ Added to Cart`;
+  setTimeout(() => {
+    addToCartBtn.textContent = "Add to Cart";
+  }, 1500);
+});
 
 async function loadProduct() {
   const params = new URLSearchParams(window.location.search);
@@ -115,4 +194,7 @@ async function loadProduct() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadProduct);
+document.addEventListener("DOMContentLoaded", () => {
+  loadProduct();
+  updateQtyButtons();
+});

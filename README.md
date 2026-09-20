@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 05 — User Registration & JWT Authentication
+Phase 06 — Shopping Cart
 
 ## Stack
 
@@ -332,14 +332,53 @@ Do not commit the real `JWT_SECRET`.
 
 ## Current Status
 
-Phase 05 implements user registration and JWT authentication:
+## Shopping Cart
 
-- `POST /api/auth/register` — register a new user (bcrypt password hashing)
-- `POST /api/auth/login` — login and set HttpOnly JWT cookie
-- `POST /api/auth/logout` — clear the auth cookie
-- `GET /api/auth/me` — protected endpoint returning the current user
-- `auth.middleware.js` — verifies JWT from cookie and protects routes
-- Frontend login and registration pages with client-side validation
-- Navigation reflects authentication state via `/api/auth/me`
+The cart is implemented with **Vanilla JavaScript** and stored in browser `localStorage`.
 
-Future phases will add shopping cart, order processing, and order history.
+### Key design decisions
+
+- **No PostgreSQL cart table.** The cart is client-side only.
+- **No cart API endpoints.** The cart never talks to the backend.
+- **Only `productId` and `quantity` are persisted** — never prices.
+- **Product prices always come from the backend API**, so displayed prices stay current.
+- **The browser is not trusted.** Phase 07 will re-fetch products, verify current prices, and check stock before creating an order.
+
+### Cart data format
+
+```json
+[
+  { "productId": 1, "quantity": 2 },
+  { "productId": 5, "quantity": 1 }
+}
+```
+
+### Cart page
+
+`/cart.html` displays cart items with quantity controls, subtotals, and a summary. The checkout button is disabled (order processing belongs to Phase 07).
+
+### Cart modules
+
+- `frontend/js/cart.js` — centralized cart state management
+- `frontend/js/cart-page.js` — cart page rendering and interactions
+- Product pages (`products.html`, `product-details.html`) include Add to Cart buttons
+
+### Cart count
+
+The navigation displays the total number of units (e.g. `Cart (5)`). The count updates after add, increase, decrease, remove, and clear.
+
+## Current Status
+
+Phase 06 implements the shopping cart:
+
+- `localStorage`-based cart with `productId` + `quantity` only
+- Add, increase, decrease, remove, clear, and count
+- Same-product merges into one cart item
+- Stock-aware UI (out-of-stock disabled, stock limit enforced)
+- Cart page with item subtotals and summary
+- Add to Cart on products and product details pages
+- Navigation cart count
+- Malformed localStorage handled safely
+- JWT remains in HttpOnly cookie only — never in localStorage
+
+Future phases will add order processing and order history.

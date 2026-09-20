@@ -1,8 +1,12 @@
 import { getCurrentUser, logoutUser } from "./api.js";
+import * as cart from "./cart.js";
 
 async function updateNavigation() {
   const navLinks = document.getElementById("nav-links");
   if (!navLinks) return;
+
+  const cartCount = cart.getCartItemCount();
+  const cartLink = `<li><a href="cart.html">Cart (${cartCount})</a></li>`;
 
   try {
     const result = await getCurrentUser();
@@ -12,7 +16,7 @@ async function updateNavigation() {
       navLinks.innerHTML = `
         <li><a href="index.html" class="active">Home</a></li>
         <li><a href="products.html">Products</a></li>
-        <li><a href="#" class="disabled">Cart</a></li>
+        ${cartLink}
         <li><a href="#" id="logout-link">Welcome, ${escapeHtml(user.name)}</a></li>
       `;
       const logoutLink = document.getElementById("logout-link");
@@ -23,13 +27,21 @@ async function updateNavigation() {
       navLinks.innerHTML = `
         <li><a href="index.html" class="active">Home</a></li>
         <li><a href="products.html">Products</a></li>
+        ${cartLink}
         <li><a href="login.html">Login</a></li>
         <li><a href="register.html">Register</a></li>
-        <li><a href="#" class="disabled">Cart</a></li>
       `;
     }
   } catch (error) {
     console.error("Failed to update navigation:", error);
+    // Fallback: still show cart link with count
+    navLinks.innerHTML = `
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="products.html">Products</a></li>
+      ${cartLink}
+      <li><a href="login.html">Login</a></li>
+      <li><a href="register.html">Register</a></li>
+    `;
   }
 }
 

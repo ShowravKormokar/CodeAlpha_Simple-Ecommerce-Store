@@ -58,7 +58,14 @@
           <p id="detail-price" class="detail-price"></p>
           <p id="detail-description" class="detail-description"></p>
           <p id="detail-stock" class="detail-stock"></p>
-          <button class="btn btn-primary" id="add-to-cart" disabled>Cart functionality coming soon</button>
+
+          <div class="qty-selector" id="qty-selector">
+            <button type="button" class="qty-btn" id="qty-dec" aria-label="Decrease quantity">−</button>
+            <input type="number" id="qty-input" class="qty-input" value="1" min="1" max="1" />
+            <button type="button" class="qty-btn" id="qty-inc" aria-label="Increase quantity">+</button>
+          </div>
+
+          <button class="btn btn-primary" id="add-to-cart">Add to Cart</button>
         </div>
       </div>
     </div>
