@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const healthRoutes = require("./routes/health.routes");
 const productRoutes = require("./routes/product.routes");
 const authRoutes = require("./routes/auth.routes");
+const orderRoutes = require("./routes/order.routes");
 const errorMiddleware = require("./middleware/error.middleware");
 const pool = require("./config/database");
 
@@ -40,6 +41,7 @@ app.use(cookieParser());
 app.use("/api", healthRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.use(errorMiddleware);
 

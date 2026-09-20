@@ -93,3 +93,12 @@ export async function getCurrentUser() {
 
   return { authenticated: true, data };
 }
+
+export async function createOrder(items) {
+  const { response, data } = await request("/orders", {
+    method: "POST",
+    body: JSON.stringify({ items }),
+  });
+
+  return { status: response.status, data };
+}

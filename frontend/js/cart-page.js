@@ -1,5 +1,5 @@
 import * as cart from "./cart.js";
-import { getProducts } from "./api.js";
+import { getProducts, getCurrentUser, createOrder } from "./api.js";
 
 const loadingEl = document.getElementById("loading");
 const emptyEl = document.getElementById("empty-state");
@@ -234,9 +234,59 @@ clearCartBtn.addEventListener("click", () => {
   loadCart();
 });
 
-checkoutBtn.addEventListener("click", () => {
-  alert("Checkout will be available in the next phase.");
-});
+async function handleCheckout() {
+  const cartItems = cart.getCart();
+
+  if (cartItems.length === 0) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  // Check authentication first.
+  const auth = await getCurrentUser();
+  if (!auth.authenticated) {
+    if (confirm("Please log in to place an order.\nGo to login page?")) {
+      window.location.href = "login.html";
+    }
+    return;
+  }
+
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = "Processing...";
+
+  try {
+    const result = await createOrder(cartItems);
+
+    if (result.status === 201 && result.data.success) {
+      cart.clearCart();
+      const order = result.data.data.order;
+      alert(
+        `Order placed successfully!\n\nOrder #${order.id}\nTotal: $${Number(
+          order.totalAmount
+        ).toFixed(2)}\nStatus: ${order.status}`
+      );
+      loadCart();
+    } else if (result.status === 401) {
+      alert("Please log in to place an order.");
+    } else if (result.status === 404) {
+      alert(result.data.message || "A product in your cart was not found.");
+    } else if (result.status === 409) {
+      alert(result.data.message || "Insufficient stock for an item in your cart.");
+    } else if (result.status === 400) {
+      alert(result.data.message || "Invalid order request.");
+    } else {
+      alert("Unable to place your order. Please try again.");
+    }
+  } catch (error) {
+    console.error("Checkout error:", error);
+    alert("Unable to place your order. Please try again.");
+  } finally {
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = "Place Order";
+  }
+}
+
+checkoutBtn.addEventListener("click", handleCheckout);
 
 retryBtn.addEventListener("click", loadCart);
 

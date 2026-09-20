@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 06 — Shopping Cart
+Phase 07 — Order Processing & PostgreSQL Transactions
 
 ## Stack
 
@@ -381,4 +381,100 @@ Phase 06 implements the shopping cart:
 - Malformed localStorage handled safely
 - JWT remains in HttpOnly cookie only — never in localStorage
 
-Future phases will add order processing and order history.
+## Order Processing
+
+### Endpoint
+
+```http
+POST /api/orders
+```
+
+Authentication: **Required** (JWT via HttpOnly cookie).
+
+### Request body
+
+```json
+{
+  "items": [
+    { "productId": 1, "quantity": 2 },
+    { "productId": 5, "quantity": 1 }
+  ]
+}
+```
+
+Only `productId` and `quantity` are sent. The browser never sends price, subtotal, or total.
+
+### Server-side authority
+
+The backend re-reads every product from PostgreSQL and:
+
+1. Validates product existence
+2. Validates stock (requested quantity <= current stock)
+3. Locks product rows with `FOR UPDATE`
+4. Calculates `subtotal = current_price × quantity`
+5. Calculates `total_amount = SUM(subtotals)`
+6. Creates the order
+7. Creates order items
+8. Decrements stock
+9. Commits the transaction
+
+All of this runs inside **one PostgreSQL transaction**. If any step fails, everything rolls back.
+
+### Transaction strategy
+
+```sql
+BEGIN
+  → SELECT ... FROM products WHERE id = ANY($1) FOR UPDATE
+  → validate existence
+  → validate stock
+  → calculate totals
+  → INSERT INTO orders
+  → INSERT INTO order_items (× N)
+  → UPDATE products SET stock_quantity = stock_quantity - $1
+COMMIT
+```
+
+A single pooled client is used for the entire transaction. On failure, `ROLLBACK` runs and the client is released.
+
+### Authentication integration
+
+`req.userId` comes from the verified JWT in `auth.middleware.js`. The client cannot supply a different `userId`.
+
+### Frontend checkout flow
+
+1. User clicks "Place Order" on the cart page
+2. Frontend checks `/api/auth/me` — unauthenticated users are prompted to log in
+3. Frontend sends only `{ items: [{ productId, quantity }] }` with `credentials: 'include'`
+4. On success (201), the localStorage cart is cleared and a confirmation is shown
+5. On failure (400/404/409/401/500), the cart is preserved and a useful message is shown
+
+### Important architecture
+
+```text
+Browser Cart (productId + quantity only)
+        ↓
+Authenticated Order API
+        ↓
+PostgreSQL
+        ↓
+Authoritative price + stock
+        ↓
+Transaction
+        ↓
+Order + Order Items + Stock decrement
+```
+
+## Current Status
+
+Phase 07 implements order processing:
+
+- `POST /api/orders` protected by auth middleware
+- Server-side product lookup with row locking (`FOR UPDATE`)
+- Stock validation (409 on insufficient stock)
+- Authoritative price calculation (browser prices/totals ignored)
+- Duplicate product IDs merged before processing
+- Single PostgreSQL transaction with BEGIN/COMMIT/ROLLBACK
+- Stock never goes negative (concurrency-safe via row locking)
+- Frontend checkout with auth check and cart clearing only on success
+
+Future phases will add order history and order detail pages.
