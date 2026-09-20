@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 04 — Product Listing & Product Details Frontend
+Phase 05 — User Registration & JWT Authentication
 
 ## Stack
 
@@ -288,12 +288,58 @@ GET /api/products/:id
 
 ## Current Status
 
-Phase 04 implements the product listing and product details frontend:
+## Authentication
 
-- `products.html` with responsive product grid
-- `product-details.html` with full product information
-- Dynamic rendering from the Express API (no hard-coded data)
-- Loading, error, empty, and not-found states
-- Navigation across home, products, and product details pages
+The application uses **JWT + HttpOnly Cookie** authentication.
 
-Future phases will add user authentication, shopping cart, and order processing.
+### Security
+
+- Passwords are hashed with `bcryptjs` (10 rounds). Plain-text passwords are never stored.
+- The JWT secret comes from the `JWT_SECRET` environment variable.
+- The JWT is stored in an `HttpOnly` cookie and is **not** accessible to frontend JavaScript.
+- The JWT is **not** stored in `localStorage` or `sessionStorage`.
+- The cookie uses `SameSite=Lax` and `Secure=true` in production (disabled for local HTTP development).
+- CORS uses an explicit frontend origin with `credentials: true`.
+
+### Environment Variables
+
+```env
+JWT_SECRET=your-long-random-secret
+JWT_EXPIRES_IN=1d
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=lax
+FRONTEND_URL=http://localhost:5500
+```
+
+Do not commit the real `JWT_SECRET`.
+
+### API Endpoints
+
+| Method | Endpoint             | Auth Required | Purpose              |
+| ------ | -------------------- | ------------: | -------------------- |
+| POST   | `/api/auth/register` |            No | Register a new user  |
+| POST   | `/api/auth/login`    |            No | Login user           |
+| POST   | `/api/auth/logout`   |            No | Clear auth cookie    |
+| GET    | `/api/auth/me`       |           Yes | Get current user     |
+
+### Authentication Flow
+
+1. User registers or logs in via the frontend.
+2. Backend validates input, hashes/verifies the password with bcrypt, and creates a JWT.
+3. The JWT is returned only as an `HttpOnly` cookie — never in the JSON body.
+4. On subsequent requests, the browser automatically attaches the cookie.
+5. Protected routes verify the JWT via `auth.middleware.js` and attach `req.userId`.
+
+## Current Status
+
+Phase 05 implements user registration and JWT authentication:
+
+- `POST /api/auth/register` — register a new user (bcrypt password hashing)
+- `POST /api/auth/login` — login and set HttpOnly JWT cookie
+- `POST /api/auth/logout` — clear the auth cookie
+- `GET /api/auth/me` — protected endpoint returning the current user
+- `auth.middleware.js` — verifies JWT from cookie and protects routes
+- Frontend login and registration pages with client-side validation
+- Navigation reflects authentication state via `/api/auth/me`
+
+Future phases will add shopping cart, order processing, and order history.
