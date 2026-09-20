@@ -2,8 +2,10 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const healthRoutes = require("./routes/health.routes");
 const productRoutes = require("./routes/product.routes");
+const authRoutes = require("./routes/auth.routes");
 const errorMiddleware = require("./middleware/error.middleware");
 const pool = require("./config/database");
 
@@ -14,13 +16,16 @@ app.use(
     origin: process.env.CORS_ORIGIN || "http://localhost:5500",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api", healthRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use(errorMiddleware);
 
