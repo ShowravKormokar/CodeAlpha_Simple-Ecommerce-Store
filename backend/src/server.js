@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const healthRoutes = require("./routes/health.routes");
 const productRoutes = require("./routes/product.routes");
@@ -11,6 +12,15 @@ const errorMiddleware = require("./middleware/error.middleware");
 const pool = require("./config/database");
 
 const app = express();
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    frameAncestors: false,
+    hsts: false,
+    referrerPolicy: { policy: "no-referrer" },
+  })
+);
 
 function buildCorsOrigins() {
   const configured = (process.env.CORS_ORIGIN || "http://localhost:5500")
@@ -35,7 +45,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 app.use("/api", healthRoutes);

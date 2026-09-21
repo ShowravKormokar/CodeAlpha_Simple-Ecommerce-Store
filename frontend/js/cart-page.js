@@ -66,13 +66,24 @@ function renderItems(items, productsById) {
     const row = document.createElement("article");
     row.className = "cart-item";
 
-    if (!product) {
-      row.innerHTML = `
-        <div class="cart-item-info">
-          <p class="muted">Product #${item.productId} is no longer available.</p>
-        </div>
-        <button class="btn btn-secondary" data-remove="${item.productId}">Remove</button>
-      `;
+if (!product) {
+      const info = document.createElement("div");
+      info.className = "cart-item-info";
+      const msg = document.createElement("p");
+      msg.className = "muted";
+      msg.textContent = `Product #${item.productId} is no longer available.`;
+      info.appendChild(msg);
+
+      const remove = document.createElement("button");
+      remove.className = "btn btn-secondary remove-btn";
+      remove.type = "button";
+      remove.textContent = "Remove";
+      remove.setAttribute("data-remove", String(item.productId));
+      remove.setAttribute("aria-label", `Remove unavailable product #${item.productId} from cart`);
+      remove.addEventListener("click", () => handleRemove(item.productId));
+
+      row.appendChild(info);
+      row.appendChild(remove);
       itemsContainer.appendChild(row);
       return;
     }

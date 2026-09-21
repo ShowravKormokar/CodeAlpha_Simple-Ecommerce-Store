@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 08 — Orders Frontend & User Order History
+Phase 09 — Validation, Error Handling & Security Hardening
 
 ## Stack
 
@@ -512,15 +512,94 @@ Both require authentication (JWT via HttpOnly cookie).
 - Orders link appears in navigation only for authenticated users
 - Unauthenticated visitors are prompted to log in
 
+## Validation & Security
+
+### Input validation
+
+- Product IDs must be positive integers (`abc`, `1.5`, `0`, `-1` → 400)
+- Order IDs must be positive integers
+- Registration validates name, email format, password length, and confirmation
+- Order items must be a non-empty array of `{ productId, quantity }` with positive integers
+- Duplicate product IDs are merged before processing
+- Invalid input returns `400` with a consistent error shape
+
+### Centralized error handling
+
+A single Express error middleware handles all errors:
+
+- `400` → invalid input
+- `401` → unauthenticated
+- `404` → resource not found
+- `409` → conflict (duplicate email, insufficient stock)
+- `500` → unexpected server error
+
+Stack traces and raw PostgreSQL errors are never exposed to clients. They are logged server-side only.
+
+### SQL injection prevention
+
+All database queries use parameterized statements (`$1`, `$2`, ...). No SQL is constructed via string interpolation. The existing PostgreSQL transaction architecture is preserved.
+
+### Authentication & cookie security
+
+- JWT is stored only in an `HttpOnly` cookie
+- JWT is never stored in `localStorage` or `sessionStorage`
+- JWT is never returned in API responses
+- JWT payload is minimal (`{ sub: userId }`)
+- Cookie uses `SameSite=Lax`, `Secure` toggled via `COOKIE_SECURE` env var
+- Logout properly clears the auth cookie
+- Invalid/expired tokens return `401`
+
+### CORS
+
+- Frontend origin is explicitly configured via `CORS_ORIGIN`
+- `127.0.0.1` and `localhost` variants are both allowed
+- `credentials: true` is enabled (required for cookies)
+- Wildcard origins are not used with credentialed requests
+
+### Security headers
+
+`helmet` is used to set basic security headers (`x-content-type-options`, `x-frame-options`, etc.) without affecting the API contract.
+
+### Authorization / ownership
+
+- `GET /api/orders` returns only the current user's orders (user ID from JWT)
+- `GET /api/orders/:id` enforces `order.id = $1 AND order.user_id = $2`
+- Cross-user access returns a safe `404`
+- The client cannot choose `userId`, `price`, `subtotal`, or `totalAmount`
+
+### Order transaction integrity
+
+- Stock validation occurs inside the transaction with `FOR UPDATE` row locking
+- Order creation, order items, and stock updates use one transaction
+- Failures trigger `ROLLBACK`
+- The database client is always released
+- The cart is cleared only after successful order creation on the frontend
+
+### localStorage cart
+
+The cart is treated as untrusted client data:
+
+- Malformed JSON is handled safely
+- Invalid product IDs and quantities are rejected
+- Stored prices and totals are never trusted
+- The backend re-validates product IDs, prices, and stock during order creation
+
+### Secrets
+
+- `.env` is ignored by Git
+- `.env.example` contains placeholders only
+- No secrets are hard-coded in source
+- No credentials or tokens are included in frontend JavaScript
+
 ## Current Status
 
-Phase 08 implements user order history and order details:
+Phase 09 hardens the existing application:
 
-- `GET /api/orders` — authenticated user's orders, newest first
-- `GET /api/orders/:id` — single order with items, ownership enforced
-- Historical prices from `order_items`, not current product prices
-- Cross-user access prevented (404)
-- Frontend orders page and order details page
-- Auth-aware navigation with Orders link
-
-Future phases will add security/validation hardening and any remaining assignment features.
+- Centralized error middleware that never exposes stack traces
+- `helmet` security headers
+- Input validation on all endpoints (product IDs, order IDs, auth fields, order items)
+- SQL injection prevention via parameterized queries
+- Authenticated ownership enforcement on order retrieval
+- Untrusted localStorage cart handling
+- Secrets audit — no credentials exposed
+- All Phase 01–08 functionality remains intact

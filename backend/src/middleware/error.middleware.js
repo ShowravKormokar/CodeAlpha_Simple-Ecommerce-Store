@@ -1,9 +1,20 @@
 const errorMiddleware = (err, req, res, next) => {
-  console.error(err.stack);
+  const status = err.status || 500;
 
-  res.status(err.status || 500).json({
+  // Log full details server-side only.
+  if (process.env.NODE_ENV !== "production") {
+    console.error(err.stack || err);
+  } else {
+    console.error(`[error] ${status}: ${err.message || "Internal server error"}`);
+  }
+
+  // Never expose internal details (stack traces, DB errors, secrets) to clients.
+  const message =
+    status >= 500 ? "Internal server error" : err.message || "Internal server error";
+
+  res.status(status).json({
     success: false,
-    message: err.message || "Internal server error",
+    message,
   });
 };
 
