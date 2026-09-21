@@ -73,14 +73,7 @@ async function login(req, res, next) {
     const email = req.body.email ? req.body.email.trim().toLowerCase() : "";
     const password = req.body.password || "";
 
-    if (!validateEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    if (!validatePassword(password)) {
+    if (!validateEmail(email) || password.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Email and password are required",

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 09 — Validation, Error Handling & Security Hardening
+Phase 10 — Integration Testing, Cleanup & Final Documentation
 
 ## Stack
 
@@ -26,15 +26,29 @@ simple-ecommerce-store/
 │   ├── index.html
 │   ├── products.html
 │   ├── product-details.html
+│   ├── cart.html
+│   ├── login.html
+│   ├── register.html
+│   ├── orders.html
+│   ├── order-details.html
 │   ├── css/
 │   │   ├── style.css
 │   │   ├── products.css
-│   │   └── product-details.css
+│   │   ├── product-details.css
+│   │   ├── cart.css
+│   │   ├── auth.css
+│   │   └── orders.css
 │   ├── js/
 │   │   ├── app.js
 │   │   ├── api.js
+│   │   ├── cart.js
+│   │   ├── cart-page.js
 │   │   ├── products.js
-│   │   └── product-details.js
+│   │   ├── product-details.js
+│   │   ├── login.js
+│   │   ├── register.js
+│   │   ├── orders.js
+│   │   └── order-details.js
 │   └── assets/
 │       └── images/
 ├── backend/
@@ -44,15 +58,22 @@ simple-ecommerce-store/
 │   │   │   └── database.js
 │   │   ├── routes/
 │   │   │   ├── health.routes.js
-│   │   │   └── product.routes.js
+│   │   │   ├── product.routes.js
+│   │   │   ├── auth.routes.js
+│   │   │   └── order.routes.js
 │   │   ├── controllers/
 │   │   │   ├── health.controller.js
-│   │   │   └── product.controller.js
+│   │   │   ├── product.controller.js
+│   │   │   ├── auth.controller.js
+│   │   │   └── order.controller.js
 │   │   ├── services/
 │   │   │   ├── health.service.js
-│   │   │   └── product.service.js
+│   │   │   ├── product.service.js
+│   │   │   ├── auth.service.js
+│   │   │   └── order.service.js
 │   │   └── middleware/
-│   │       └── error.middleware.js
+│   │       ├── error.middleware.js
+│   │       └── auth.middleware.js
 │   ├── database/
 │   │   ├── schema.sql
 │   │   └── seed.sql
