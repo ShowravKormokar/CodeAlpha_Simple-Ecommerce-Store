@@ -209,4 +209,83 @@ async function createOrder(userId, rawItems) {
   }
 }
 
-module.exports = { createOrder, normalizeItems };
+module.exports = { createOrder, normalizeItems, getOrdersByUser, getOrderByIdAndUser };
+
+// Return the authenticated user's order history, newest first.
+async function getOrdersByUser(userId) {
+  const result = await pool.query(
+    `SELECT
+        id,
+        total_amount,
+        status,
+        created_at,
+        updated_at
+     FROM orders
+     WHERE user_id = $1
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    totalAmount: row.total_amount,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+// Return a single order with its items, enforcing ownership.
+// Returns null if the order does not exist or does not belong to the user.
+async function getOrderByIdAndUser(orderId, userId) {
+  const orderResult = await pool.query(
+    `SELECT
+        id,
+        user_id,
+        total_amount,
+        status,
+        created_at,
+        updated_at
+     FROM orders
+     WHERE id = $1
+       AND user_id = $2`,
+    [orderId, userId]
+  );
+
+  if (orderResult.rows.length === 0) {
+    return null;
+  }
+
+  const order = orderResult.rows[0];
+
+  const itemsResult = await pool.query(
+    `SELECT
+        oi.product_id,
+        p.name AS product_name,
+        oi.quantity,
+        oi.unit_price,
+        oi.subtotal
+     FROM order_items oi
+     JOIN products p
+       ON p.id = oi.product_id
+     WHERE oi.order_id = $1
+     ORDER BY oi.id ASC`,
+    [order.id]
+  );
+
+  return {
+    id: order.id,
+    userId: order.user_id,
+    totalAmount: order.total_amount,
+    status: order.status,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
+    items: itemsResult.rows.map((row) => ({
+      productId: row.product_id,
+      productName: row.product_name,
+      quantity: row.quantity,
+      unitPrice: row.unit_price,
+      subtotal: row.subtotal,
+    })),
+  };
+}

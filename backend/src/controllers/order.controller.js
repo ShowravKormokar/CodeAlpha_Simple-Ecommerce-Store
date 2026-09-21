@@ -41,4 +41,50 @@ async function createOrder(req, res, next) {
   }
 }
 
-module.exports = { createOrder };
+// GET /api/orders
+async function getOrders(req, res, next) {
+  try {
+    const userId = req.userId;
+    const orders = await orderService.getOrdersByUser(userId);
+
+    res.status(200).json({
+      success: true,
+      data: { orders },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// GET /api/orders/:id
+async function getOrderById(req, res, next) {
+  const orderId = Number(req.params.id);
+
+  if (!Number.isInteger(orderId) || orderId <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid order ID",
+    });
+  }
+
+  try {
+    const userId = req.userId;
+    const order = await orderService.getOrderByIdAndUser(orderId, userId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { order },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { createOrder, getOrders, getOrderById };

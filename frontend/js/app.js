@@ -17,6 +17,7 @@ async function updateNavigation() {
         <li><a href="index.html" class="active">Home</a></li>
         <li><a href="products.html">Products</a></li>
         ${cartLink}
+        <li><a href="orders.html">Orders</a></li>
         <li><a href="#" id="logout-link">Welcome, ${escapeHtml(user.name)}</a></li>
       `;
       const logoutLink = document.getElementById("logout-link");

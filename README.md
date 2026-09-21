@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 07 — Order Processing & PostgreSQL Transactions
+Phase 08 — Orders Frontend & User Order History
 
 ## Stack
 
@@ -477,4 +477,50 @@ Phase 07 implements order processing:
 - Stock never goes negative (concurrency-safe via row locking)
 - Frontend checkout with auth check and cart clearing only on success
 
-Future phases will add order history and order detail pages.
+## Order History
+
+### Endpoints
+
+```http
+GET /api/orders
+GET /api/orders/:id
+```
+
+Both require authentication (JWT via HttpOnly cookie).
+
+### Security
+
+- The authenticated user ID comes **only** from the verified JWT.
+- The client cannot supply a `userId` to filter orders.
+- `GET /api/orders` returns only the current user's orders.
+- `GET /api/orders/:id` enforces `order.id = $1 AND order.user_id = $2`.
+- Cross-user access returns `404` (does not reveal another user's order exists).
+- Invalid order IDs return `400`.
+- SQL is parameterized.
+
+### Historical accuracy
+
+- `order_items.unit_price` stores the price at purchase time.
+- Historical orders show the stored `unit_price`, not the current `products.price`.
+- The stored `orders.total_amount` is the authoritative historical total.
+
+### Frontend
+
+- `frontend/orders.html` — order history list (newest first)
+- `frontend/order-details.html?id=<id>` — order details with items
+- Loading, empty, and error states
+- Orders link appears in navigation only for authenticated users
+- Unauthenticated visitors are prompted to log in
+
+## Current Status
+
+Phase 08 implements user order history and order details:
+
+- `GET /api/orders` — authenticated user's orders, newest first
+- `GET /api/orders/:id` — single order with items, ownership enforced
+- Historical prices from `order_items`, not current product prices
+- Cross-user access prevented (404)
+- Frontend orders page and order details page
+- Auth-aware navigation with Orders link
+
+Future phases will add security/validation hardening and any remaining assignment features.

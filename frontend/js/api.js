@@ -102,3 +102,35 @@ export async function createOrder(items) {
 
   return { status: response.status, data };
 }
+
+export async function getOrders() {
+  const { response, data } = await request("/orders");
+
+  if (response.status === 401) {
+    return { authenticated: false, data };
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`);
+  }
+
+  return { authenticated: true, data };
+}
+
+export async function getOrderById(orderId) {
+  const { response, data } = await request(`/orders/${orderId}`);
+
+  if (response.status === 401) {
+    return { authenticated: false, data };
+  }
+
+  if (response.status === 404) {
+    return { authenticated: true, data: null };
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`);
+  }
+
+  return { authenticated: true, data };
+}
