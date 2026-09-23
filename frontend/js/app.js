@@ -2,164 +2,148 @@ import { getCurrentUser, logoutUser, getProducts } from "./api.js";
 import * as cart from "./cart.js";
 
 /* =========================================================
-   NAVIGATION
+   NAVIGATION HELPERS
+   ========================================================= */
+
+function getCurrentPage() {
+  const path = window.location.pathname;
+  const file = path.split("/").pop();
+  return file || "index.html";
+}
+
+function isActive(page) {
+  return getCurrentPage() === page ? "active" : "";
+}
+
+function getCartCount() {
+  return cart.getCartItemCount();
+}
+
+/* =========================================================
+   NAVIGATION RENDERING
+   ========================================================= */
+
+function renderLoggedOutNavigation() {
+  const count = getCartCount();
+
+  return `
+    <li>
+      <a href="index.html" class="${isActive("index.html")}">
+        <i class="ri-home-5-line" aria-hidden="true"></i>
+        <span>Home</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="products.html" class="${isActive("products.html")}">
+        <i class="ri-store-2-line" aria-hidden="true"></i>
+        <span>Products</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="cart.html" class="${isActive("cart.html")}">
+        <i class="ri-shopping-cart-2-line" aria-hidden="true"></i>
+        <span>Cart</span>
+        ${count > 0 ? `<span class="nav-cart-count">${count}</span>` : ""}
+      </a>
+    </li>
+
+    <li>
+      <a href="login.html" class="${isActive("login.html")}">
+        <i class="ri-login-box-line" aria-hidden="true"></i>
+        <span>Login</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="register.html" class="${isActive("register.html")}">
+        <i class="ri-user-add-line" aria-hidden="true"></i>
+        <span>Register</span>
+      </a>
+    </li>
+  `;
+}
+
+function renderLoggedInNavigation(user) {
+  const count = getCartCount();
+
+  return `
+    <li>
+      <a href="index.html" class="${isActive("index.html")}">
+        <i class="ri-home-5-line" aria-hidden="true"></i>
+        <span>Home</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="products.html" class="${isActive("products.html")}">
+        <i class="ri-store-2-line" aria-hidden="true"></i>
+        <span>Products</span>
+      </a>
+    </li>
+
+    <li>
+      <a href="cart.html" class="${isActive("cart.html")}">
+        <i class="ri-shopping-cart-2-line" aria-hidden="true"></i>
+        <span>Cart</span>
+        ${count > 0 ? `<span class="nav-cart-count">${count}</span>` : ""}
+      </a>
+    </li>
+
+    <li>
+      <a
+        href="orders.html"
+        class="${isActive("orders.html") || getCurrentPage() === "order-details.html"
+      ? "active"
+      : ""
+    }"
+      >
+        <i class="ri-file-list-3-line" aria-hidden="true"></i>
+        <span>Orders</span>
+      </a>
+    </li>
+
+    <li>
+      <a
+        href="my-account.html"
+        class="account-link ${isActive("my-account.html")}"
+        aria-label="My account"
+      >
+        <span class="account-icon">
+          <i class="ri-user-3-line" aria-hidden="true"></i>
+        </span>
+
+        <span class="account-name">
+          ${escapeHtml(user.name)}
+        </span>
+      </a>
+    </li>
+  `;
+}
+
+/* =========================================================
+   UPDATE NAVIGATION
    ========================================================= */
 
 async function updateNavigation() {
   const navLinks = document.getElementById("nav-links");
   if (!navLinks) return;
 
-  const currentPage =
-    window.location.pathname.split("/").pop() || "index.html";
-
-  const isActive = (page) =>
-    currentPage === page ? "active" : "";
-
-  const cartCount = cart.getCartItemCount();
-
-  const cartLink = `
-    <li>
-      <a href="cart.html" class="${isActive("cart.html")}">
-        Cart <span class="cart-count">${cartCount}</span>
-      </a>
-    </li>
-  `;
-
   try {
     const result = await getCurrentUser();
 
-    if (result?.authenticated && result?.data) {
-      const user = result.data.user ?? result.data;
-
-      navLinks.innerHTML = `
-        <li>
-          <a href="index.html" class="${isActive("index.html")}">
-            Home
-          </a>
-        </li>
-
-        <li>
-          <a href="products.html" class="${isActive("products.html")}">
-            Products
-          </a>
-        </li>
-
-        ${cartLink}
-
-        <li>
-          <a href="orders.html" class="${isActive("orders.html")}">
-            Orders
-          </a>
-        </li>
-
-        <li>
-          <a href="my-account.html"
-             class="account-link ${isActive("my-account.html")}"
-             aria-label="My Account"
-             title="My Account">
-            <span class="account-icon" aria-hidden="true">
-              <i class="ri-user-3-line"></i>
-            </span>
-            <span class="account-name">
-              ${escapeHtml(user.name)}
-            </span>
-          </a>
-        </li>
-      `;
-
-      return;
+    if (result?.authenticated && result?.data?.user) {
+      navLinks.innerHTML = renderLoggedInNavigation(result.data.user);
+    } else {
+      navLinks.innerHTML = renderLoggedOutNavigation();
     }
-
-    navLinks.innerHTML = `
-      <li>
-        <a href="index.html" class="${isActive("index.html")}">
-          Home
-        </a>
-      </li>
-
-      <li>
-        <a href="products.html" class="${isActive("products.html")}">
-          Products
-        </a>
-      </li>
-
-      ${cartLink}
-
-      <li>
-        <a href="login.html" class="${isActive("login.html")}">
-          Login
-        </a>
-      </li>
-
-      <li>
-        <a href="register.html" class="${isActive("register.html")}">
-          Register
-        </a>
-      </li>
-    `;
   } catch (error) {
     console.error("Failed to update navigation:", error);
-
-    navLinks.innerHTML = `
-      <li>
-        <a href="index.html" class="${isActive("index.html")}">
-          Home
-        </a>
-      </li>
-
-      <li>
-        <a href="products.html" class="${isActive("products.html")}">
-          Products
-        </a>
-      </li>
-
-      ${cartLink}
-
-      <li>
-        <a href="login.html" class="${isActive("login.html")}">
-          Login
-        </a>
-      </li>
-
-      <li>
-        <a href="register.html" class="${isActive("register.html")}">
-          Register
-        </a>
-      </li>
-    `;
+    navLinks.innerHTML = renderLoggedOutNavigation();
   }
-}
 
-function renderGuestNavigation(navLinks, cartCount) {
-  navLinks.innerHTML = `
-    <li>
-      <a href="index.html" class="active">
-        <span>Home</span>
-      </a>
-    </li>
-
-    <li>
-      <a href="products.html">
-        <span>Products</span>
-      </a>
-    </li>
-
-    <li>
-      <a href="cart.html" class="nav-cart-link">
-        <i class="ri-shopping-bag-line" aria-hidden="true"></i>
-        <span>Cart</span>
-        <span class="cart-count" id="cart-count">${cartCount}</span>
-      </a>
-    </li>
-
-    <li>
-      <a href="login.html">Login</a>
-    </li>
-
-    <li>
-      <a href="register.html" class="nav-register">Register</a>
-    </li>
-  `;
+  setupMobileNavigation();
 }
 
 /* =========================================================
@@ -168,37 +152,58 @@ function renderGuestNavigation(navLinks, cartCount) {
 
 function setupMobileNavigation() {
   const toggle = document.getElementById("mobile-menu-toggle");
-  const navCenter = document.querySelector(".nav-center");
+  const navLinks = document.getElementById("nav-links");
 
-  if (!toggle || !navCenter) return;
+  if (!toggle || !navLinks) return;
+
+  /*
+   * Prevent duplicate listeners
+   * if updateNavigation() runs again.
+   */
+  if (toggle.dataset.initialized === "true") {
+    return;
+  }
+
+  toggle.dataset.initialized = "true";
 
   toggle.addEventListener("click", () => {
-    const isOpen = navCenter.classList.toggle("menu-open");
+    const isOpen = navLinks.classList.toggle("is-open");
 
     toggle.setAttribute("aria-expanded", String(isOpen));
-    toggle.setAttribute(
-      "aria-label",
-      isOpen ? "Close navigation menu" : "Open navigation menu"
-    );
 
-    toggle.innerHTML = isOpen
-      ? '<i class="ri-close-line" aria-hidden="true"></i>'
-      : '<i class="ri-menu-line" aria-hidden="true"></i>';
+    const icon = toggle.querySelector("i");
+    if (icon) {
+      icon.className = isOpen ? "ri-close-line" : "ri-menu-line";
+    }
   });
 
-  navCenter.addEventListener("click", (event) => {
+  navLinks.addEventListener("click", (event) => {
     const link = event.target.closest("a");
-
     if (!link) return;
 
-    navCenter.classList.remove("menu-open");
-
+    navLinks.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
-    toggle.setAttribute("aria-label", "Open navigation menu");
 
-    toggle.innerHTML =
-      '<i class="ri-menu-line" aria-hidden="true"></i>';
+    const icon = toggle.querySelector("i");
+    if (icon) {
+      icon.className = "ri-menu-line";
+    }
   });
+}
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+async function handleLogout(event) {
+  event.preventDefault();
+
+  try {
+    await logoutUser();
+    window.location.href = "index.html";
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
 }
 
 /* =========================================================
@@ -243,16 +248,13 @@ async function loadFeaturedProducts() {
           <p>No products are available right now.</p>
         </div>
       `;
-
       return;
     }
 
     // Keep the homepage focused. Show only the first four products.
     const featuredProducts = products.slice(0, 4);
 
-    productsGrid.innerHTML = featuredProducts
-      .map(createProductCard)
-      .join("");
+    productsGrid.innerHTML = featuredProducts.map(createProductCard).join("");
 
     attachProductCardEvents();
   } catch (error) {
@@ -357,14 +359,11 @@ function attachProductCardEvents() {
 
       try {
         cart.addToCart(productId, 1);
-
         updateCartCount();
 
         const originalIcon = button.innerHTML;
 
-        button.innerHTML =
-          '<i class="ri-check-line" aria-hidden="true"></i>';
-
+        button.innerHTML = '<i class="ri-check-line" aria-hidden="true"></i>';
         button.setAttribute("aria-label", "Added to cart");
 
         window.setTimeout(() => {
@@ -399,10 +398,20 @@ function attachProductCardEvents() {
 
 function updateCartCount() {
   const cartCountElement = document.getElementById("cart-count");
-
   if (!cartCountElement) return;
 
   cartCountElement.textContent = String(cart.getCartItemCount());
+
+  // Also refresh navigation cart badge, if present.
+  const navBadge = document.querySelector(".nav-cart-count");
+  if (navBadge) {
+    const count = cart.getCartItemCount();
+    if (count > 0) {
+      navBadge.textContent = String(count);
+    } else {
+      navBadge.remove();
+    }
+  }
 }
 
 /* =========================================================
