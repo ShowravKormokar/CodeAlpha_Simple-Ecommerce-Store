@@ -4,85 +4,195 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cart — Simple E-commerce Store</title>
+
+  <title>Cart — Simple E-commerce</title>
+
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/cart.css" />
+
   <link
     href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
     rel="stylesheet" />
+
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
 </head>
 
 <body>
+
+  <!-- HEADER -->
+
   <header class="site-header">
-    <nav class="nav container" aria-label="Main navigation"> <a class="nav-brand" href="index.html"
-        aria-label="Simple E-commerce Store home"> <span class="brand-mark"> <i class="ri-shopping-bag-3-fill"
-            aria-hidden="true"></i> </span> <span class="brand-text"> <span class="brand-name">Simple</span> <span
-            class="brand-subtitle">E-commerce</span> </span> </a>
+    <nav class="nav container" aria-label="Main navigation">
+
+      <a class="nav-brand" href="index.html">
+        <span class="brand-mark">
+          <i class="ri-shopping-bag-3-fill" aria-hidden="true"></i>
+        </span>
+
+        <span class="brand-text">
+          <span class="brand-name">Simple</span>
+          <span class="brand-subtitle">E-commerce</span>
+        </span>
+      </a>
+
       <div class="nav-center">
-        <ul class="nav-links" id="nav-links"> <!-- Populated by app.js --> </ul>
-      </div> <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu"
-        aria-expanded="false" aria-controls="nav-links"> <i class="ri-menu-line" aria-hidden="true"></i> </button>
+        <ul class="nav-links" id="nav-links"></ul>
+      </div>
+
+      <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu"
+        aria-expanded="false" aria-controls="nav-links">
+        <i class="ri-menu-line" aria-hidden="true"></i>
+      </button>
+
     </nav>
   </header>
 
+
+  <!-- MAIN -->
+
   <main>
-    <div class="page-header">
+
+    <section class="page-header cart-page-header">
+
+      <div class="page-header-icon">
+        <i class="ri-shopping-cart-2-line" aria-hidden="true"></i>
+      </div>
+
       <h1>Your Cart</h1>
-      <p>Review your selected items.</p>
-    </div>
 
-    <div id="cart-container">
-      <div class="loading" id="loading" style="display: none;">
+      <p>
+        Review your selected items before checkout.
+      </p>
+
+    </section>
+
+
+    <section id="cart-container" class="cart-container">
+
+      <!-- Loading -->
+
+      <div class="loading cart-state" id="loading" style="display: none;">
         <div class="spinner" aria-hidden="true"></div>
-        <p>Loading cart...</p>
+
+        <h2>Loading your cart</h2>
+
+        <p>Checking your selected products.</p>
       </div>
 
-      <div class="empty-state" id="empty-state">
+
+      <!-- Empty -->
+
+      <div class="empty-state cart-state" id="empty-state">
+        <div class="state-icon state-icon-empty">
+          <i class="ri-shopping-cart-line" aria-hidden="true"></i>
+        </div>
+
         <h2>Your cart is empty</h2>
-        <p>Browse our products and add something you like.</p>
-        <a class="btn btn-primary" href="products.html">Browse Products</a>
+
+        <p>
+          Browse our products and add something you like.
+        </p>
+
+        <a class="btn btn-primary" href="products.html">
+          <i class="ri-store-2-line" aria-hidden="true"></i>
+          Browse Products
+        </a>
       </div>
 
-      <div class="error-state" id="error-state" style="display: none;">
+
+      <!-- Error -->
+
+      <div class="error-state cart-state" id="error-state" style="display: none;">
+        <div class="state-icon state-icon-error">
+          <i class="ri-error-warning-line" aria-hidden="true"></i>
+        </div>
+
         <h2>Unable to load cart</h2>
-        <p>There was a problem fetching product information.</p>
-        <button class="btn btn-secondary" id="retry-cart">Retry</button>
+
+        <p>
+          There was a problem fetching product information.
+        </p>
+
+        <button class="btn btn-secondary" id="retry-cart" type="button">
+          <i class="ri-refresh-line" aria-hidden="true"></i>
+          Try Again
+        </button>
       </div>
 
-      <div id="cart-items-container" style="display: none;"></div>
+
+      <!-- Items -->
+
+      <div id="cart-items-container" class="cart-items-container" style="display: none;"></div>
+
+
+      <!-- Summary -->
 
       <div class="cart-summary" id="cart-summary" style="display: none;">
+
+        <div class="summary-heading">
+          <div>
+            <span class="summary-eyebrow">Order summary</span>
+            <h2>Cart Total</h2>
+          </div>
+
+          <i class="ri-receipt-line" aria-hidden="true"></i>
+        </div>
+
+
         <div class="summary-row">
           <span>Subtotal</span>
           <strong id="cart-subtotal">$0.00</strong>
         </div>
-        <div class="summary-row">
+
+        <!-- <div class="summary-row">
           <span>Shipping</span>
           <strong>$0.00</strong>
         </div>
+
         <div class="summary-row">
           <span>Tax</span>
           <strong>$0.00</strong>
-        </div>
+        </div> -->
+
         <div class="summary-divider"></div>
+
         <div class="summary-row summary-total">
           <span>Total</span>
           <strong id="cart-total">$0.00</strong>
         </div>
+
+
         <div class="summary-actions">
-          <button class="btn btn-secondary" id="clear-cart-btn">Clear Cart</button>
-          <button class="btn btn-primary" id="checkout-btn">Checkout</button>
+
+          <button class="btn btn-secondary" id="clear-cart-btn" type="button">
+            <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+            Clear Cart
+          </button>
+
+          <button class="btn btn-primary" id="checkout-btn" type="button">
+            Checkout
+            <i class="ri-arrow-right-line" aria-hidden="true"></i>
+          </button>
+
         </div>
+
       </div>
-    </div>
+
+    </section>
+
   </main>
 
-  <!-- ==================== FOOTER ==================== -->
+
+  <!-- FOOTER -->
+
   <footer class="site-footer">
+
     <div class="container footer-main">
+
       <div class="footer-brand">
+
         <a class="nav-brand" href="index.html">
+
           <span class="brand-mark">
             <i class="ri-shopping-bag-3-fill" aria-hidden="true"></i>
           </span>
@@ -91,13 +201,16 @@
             <span class="brand-name">Simple</span>
             <span class="brand-subtitle">E-commerce</span>
           </span>
+
         </a>
 
         <p>
-          A simple, modern shopping experience built for everyday online
-          shopping.
+          A simple, modern shopping experience built for everyday
+          online shopping.
         </p>
+
       </div>
+
 
       <div class="footer-column">
         <h3>Shop</h3>
@@ -105,33 +218,44 @@
         <a href="cart.html">Cart</a>
       </div>
 
+
       <div class="footer-column">
         <h3>Account</h3>
-        <a href="login.html">Login</a>
-        <a href="register.html">Create account</a>
         <a href="orders.html">My orders</a>
+        <a href="account.html">My account</a>
       </div>
+
 
       <div class="footer-column">
         <h3>Explore</h3>
         <a href="index.html">Home</a>
         <a href="products.html">Collection</a>
       </div>
+
     </div>
 
+
     <div class="container footer-bottom">
-      <p>&copy; 2026 Simple E-commerce Store. All rights reserved.</p>
+
+      <p>
+        &copy; 2026 Simple E-commerce Store.
+        All rights reserved.
+      </p>
 
       <div class="footer-bottom-links">
         <span>Built for a simple shopping experience.</span>
       </div>
+
     </div>
+
   </footer>
+
 
   <script type="module" src="js/api.js"></script>
   <script type="module" src="js/cart.js"></script>
   <script type="module" src="js/cart-page.js"></script>
   <script type="module" src="js/app.js"></script>
+
 </body>
 
 </html>
