@@ -1,7 +1,7 @@
 // Backend port is configured in backend/.env (PORT).
 // The API base URL is derived from the frontend's own origin so the
 // app works whether the frontend is served from localhost or 127.0.0.1.
-const BACKEND_PORT = 8000;
+const BACKEND_PORT = 5000;
 
 function buildApiBaseUrl() {
   if (typeof window !== "undefined" && window.location) {
@@ -91,13 +91,13 @@ export async function getCurrentUser() {
     throw new Error(`HTTP error: ${response.status}`);
   }
 
-  return { authenticated: true, data };
+  return { authenticated: true, data: data.data };
 }
 
-export async function createOrder(items) {
+export async function createOrder(items, shipping = {}) {
   const { response, data } = await request("/orders", {
     method: "POST",
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, shipping }),
   });
 
   return { status: response.status, data };
@@ -114,7 +114,7 @@ export async function getOrders() {
     throw new Error(`HTTP error: ${response.status}`);
   }
 
-  return { authenticated: true, data };
+  return { authenticated: true, data: data.data };
 }
 
 export async function getOrderById(orderId) {
@@ -132,7 +132,7 @@ export async function getOrderById(orderId) {
     throw new Error(`HTTP error: ${response.status}`);
   }
 
-  return { authenticated: true, data };
+  return { authenticated: true, data: data.data };
 }
 
 // POST /api/orders/:orderId/items/:orderItemId/rating
