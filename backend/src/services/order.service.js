@@ -56,12 +56,25 @@ async function findProductsByIds(productIds, client) {
 }
 
 // Create the order header inside the transaction.
-async function insertOrder(userId, totalAmount, status, client) {
+async function insertOrder(userId, totalAmount, status, shippingInfo, client) {
   const result = await client.query(
-    `INSERT INTO orders (user_id, total_amount, status)
-     VALUES ($1, $2, $3)
-     RETURNING id, user_id, total_amount, status, created_at, updated_at`,
-    [userId, totalAmount, status]
+    `INSERT INTO orders (user_id, total_amount, status, shipping_name, shipping_email, shipping_phone, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_postal_code, shipping_country)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     RETURNING id, user_id, total_amount, status, created_at, updated_at, shipping_name, shipping_email, shipping_phone, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_postal_code, shipping_country`,
+    [
+      userId,
+      totalAmount,
+      status,
+      shippingInfo.name || null,
+      shippingInfo.email || null,
+      shippingInfo.phone || null,
+      shippingInfo.addressLine1 || null,
+      shippingInfo.addressLine2 || null,
+      shippingInfo.city || null,
+      shippingInfo.state || null,
+      shippingInfo.postalCode || null,
+      shippingInfo.country || null,
+    ]
   );
   return result.rows[0];
 }
@@ -98,7 +111,7 @@ async function decreaseStock(productId, quantity, client) {
 
 // Main order creation flow.
 // Runs entirely inside a single PostgreSQL transaction.
-async function createOrder(userId, rawItems) {
+async function createOrder(userId, rawItems, shippingInfo = {}) {
   const normalized = normalizeItems(rawItems);
 
   if (normalized.error) {
@@ -161,11 +174,12 @@ async function createOrder(userId, rawItems) {
     // Round to 2 decimal places to match NUMERIC(10,2).
     totalAmount = Math.round(totalAmount * 100) / 100;
 
-    // Create order header.
+    // Create order header with shipping info.
     const order = await insertOrder(
       userId,
       totalAmount,
       "confirmed",
+      shippingInfo,
       client
     );
 
@@ -198,6 +212,15 @@ async function createOrder(userId, rawItems) {
         status: order.status,
         createdAt: order.created_at,
         updatedAt: order.updated_at,
+        shippingName: order.shipping_name,
+        shippingEmail: order.shipping_email,
+        shippingPhone: order.shipping_phone,
+        shippingAddressLine1: order.shipping_address_line1,
+        shippingAddressLine2: order.shipping_address_line2,
+        shippingCity: order.shipping_city,
+        shippingState: order.shipping_state,
+        shippingPostalCode: order.shipping_postal_code,
+        shippingCountry: order.shipping_country,
       },
       items: createdItems,
     };
@@ -219,7 +242,16 @@ async function getOrdersByUser(userId) {
         total_amount,
         status,
         created_at,
-        updated_at
+        updated_at,
+        shipping_name,
+        shipping_email,
+        shipping_phone,
+        shipping_address_line1,
+        shipping_address_line2,
+        shipping_city,
+        shipping_state,
+        shipping_postal_code,
+        shipping_country
      FROM orders
      WHERE user_id = $1
      ORDER BY created_at DESC`,
@@ -232,6 +264,15 @@ async function getOrdersByUser(userId) {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    shippingName: row.shipping_name,
+    shippingEmail: row.shipping_email,
+    shippingPhone: row.shipping_phone,
+    shippingAddressLine1: row.shipping_address_line1,
+    shippingAddressLine2: row.shipping_address_line2,
+    shippingCity: row.shipping_city,
+    shippingState: row.shipping_state,
+    shippingPostalCode: row.shipping_postal_code,
+    shippingCountry: row.shipping_country,
   }));
 }
 
@@ -245,7 +286,16 @@ async function getOrderByIdAndUser(orderId, userId) {
         total_amount,
         status,
         created_at,
-        updated_at
+        updated_at,
+        shipping_name,
+        shipping_email,
+        shipping_phone,
+        shipping_address_line1,
+        shipping_address_line2,
+        shipping_city,
+        shipping_state,
+        shipping_postal_code,
+        shipping_country
      FROM orders
      WHERE id = $1
        AND user_id = $2`,
@@ -260,6 +310,7 @@ async function getOrderByIdAndUser(orderId, userId) {
 
   const itemsResult = await pool.query(
     `SELECT
+        oi.id,
         oi.product_id,
         p.name AS product_name,
         oi.quantity,
@@ -282,7 +333,17 @@ async function getOrderByIdAndUser(orderId, userId) {
     status: order.status,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
+    shippingName: order.shipping_name,
+    shippingEmail: order.shipping_email,
+    shippingPhone: order.shipping_phone,
+    shippingAddressLine1: order.shipping_address_line1,
+    shippingAddressLine2: order.shipping_address_line2,
+    shippingCity: order.shipping_city,
+    shippingState: order.shipping_state,
+    shippingPostalCode: order.shipping_postal_code,
+    shippingCountry: order.shipping_country,
     items: itemsResult.rows.map((row) => ({
+      id: row.id,
       productId: row.product_id,
       productName: row.product_name,
       quantity: row.quantity,

@@ -5,7 +5,7 @@ const orderService = require("../services/order.service");
 async function createOrder(req, res, next) {
   try {
     const userId = req.userId;
-    const { items } = req.body || {};
+    const { items, shipping } = req.body || {};
 
     if (!items) {
       return res.status(400).json({
@@ -14,7 +14,7 @@ async function createOrder(req, res, next) {
       });
     }
 
-    const result = await orderService.createOrder(userId, items);
+    const result = await orderService.createOrder(userId, items, shipping);
 
     res.status(201).json({
       success: true,
@@ -23,9 +23,9 @@ async function createOrder(req, res, next) {
         order: result.order,
         items: result.items.map((item) => ({
           id: item.id,
-          productId: item.product_id,
+          productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unit_price,
+          unitPrice: item.unitPrice,
           subtotal: item.subtotal,
         })),
       },
