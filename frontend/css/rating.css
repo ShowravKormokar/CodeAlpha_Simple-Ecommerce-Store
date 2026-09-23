@@ -2,7 +2,7 @@
 .star-rating {
   display: inline-flex;
   flex-direction: row;
-  gap: 4px;
+  gap: 6px;
   user-select: none;
 }
 

@@ -1,53 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta name="description" content="Sign in to your Simple E-commerce Store account." />
+
   <title>Login — Simple E-commerce Store</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
+
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/auth.css" />
 </head>
-<body>
-  <header class="site-header">
+
+<body class="auth-page">
+
+  <!-- <header class="site-header auth-header">
     <nav class="nav">
-      <a class="nav-brand" href="index.html">Simple E-commerce Store</a>
-      <ul class="nav-links" id="nav-links">
-        </ul>
+      <a class="nav-brand" href="index.html">
+        <span class="brand-mark">
+          <i class="ri-shopping-bag-3-line"></i>
+        </span>
+        <span>Simple E-commerce Store</span>
+      </a>
+
+      <ul class="nav-links" id="nav-links"></ul>
     </nav>
-  </header>
+  </header> -->
 
   <main class="auth-wrapper">
-    <div class="auth-card">
-      <h1>Login</h1>
 
-      <div class="error-message" id="error-message" style="display: none;"></div>
+    <section class="auth-container" aria-labelledby="login-title">
 
-      <form id="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+      <div class="auth-visual">
+        <div class="auth-visual-content">
+
+          <a href="index.html" class="auth-logo" aria-label="Go to homepage">
+            <span class="auth-logo-icon">
+              <i class="ri-shopping-bag-3-fill"></i>
+            </span>
+          </a>
+
+          <span class="auth-eyebrow">
+            <i class="ri-sparkling-2-line"></i>
+            Welcome back
+          </span>
+
+          <h1>Good to see you again.</h1>
+
+          <p>
+            Sign in to continue shopping, manage your orders,
+            and keep everything in one place.
+          </p>
+
+          <div class="auth-visual-features">
+            <div class="auth-feature">
+              <span class="auth-feature-icon">
+                <i class="ri-shield-check-line"></i>
+              </span>
+              <div>
+                <strong>Secure account</strong>
+                <span>Your account stays protected.</span>
+              </div>
+            </div>
+
+            <div class="auth-feature">
+              <span class="auth-feature-icon">
+                <i class="ri-shopping-bag-line"></i>
+              </span>
+              <div>
+                <strong>Easy shopping</strong>
+                <span>Pick up where you left off.</span>
+              </div>
+            </div>
+
+            <div class="auth-feature">
+              <span class="auth-feature-icon">
+                <i class="ri-truck-line"></i>
+              </span>
+              <div>
+                <strong>Track your orders</strong>
+                <span>Keep your purchases organized.</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Your password" autocomplete="current-password" required />
+        <div class="auth-decoration auth-decoration-one"></div>
+        <div class="auth-decoration auth-decoration-two"></div>
+      </div>
+
+      <div class="auth-card">
+
+        <div class="auth-card-header">
+          <div class="auth-mobile-icon">
+            <i class="ri-login-circle-line"></i>
+          </div>
+
+          <span class="auth-card-eyebrow">Account access</span>
+
+          <h2 id="login-title">Welcome back</h2>
+
+          <p>
+            Enter your details to access your account.
+          </p>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="login-btn">Login</button>
-      </form>
+        <div class="error-message" id="error-message" role="alert" aria-live="polite" style="display: none;"></div>
 
-      <p class="auth-link">
-        Don't have an account? <a href="register.html">Register</a>
-      </p>
-    </div>
+        <form id="login-form" novalidate>
+
+          <div class="form-group">
+            <label for="email">
+              Email address
+            </label>
+
+            <div class="input-wrapper">
+              <i class="ri-mail-line input-icon" aria-hidden="true"></i>
+
+              <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email"
+                inputmode="email" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="password">
+                Password
+              </label>
+            </div>
+
+            <div class="input-wrapper">
+              <i class="ri-lock-2-line input-icon" aria-hidden="true"></i>
+
+              <input type="password" id="password" name="password" placeholder="Enter your password"
+                autocomplete="current-password" required />
+
+              <button type="button" class="password-toggle" id="password-toggle" aria-label="Show password"
+                aria-controls="password" aria-pressed="false">
+                <i class="ri-eye-line" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary auth-submit" id="login-btn">
+            <span class="btn-text">Login</span>
+            <i class="ri-arrow-right-line btn-icon" aria-hidden="true"></i>
+          </button>
+
+        </form>
+
+        <div class="auth-divider">
+          <span>New here?</span>
+        </div>
+
+        <p class="auth-link">
+          Don't have an account?
+          <a href="register.html">
+            Create an account
+            <i class="ri-arrow-right-line" aria-hidden="true"></i>
+          </a>
+        </p>
+
+        <p class="auth-security-note">
+          <i class="ri-lock-line" aria-hidden="true"></i>
+          Your connection and account information are protected.
+        </p>
+
+      </div>
+
+    </section>
+
   </main>
 
-  <footer class="site-footer">
+  <footer class="site-footer auth-footer">
     <p>&copy; 2026 Simple E-commerce Store</p>
   </footer>
 
   <script type="module" src="js/api.js"></script>
   <script type="module" src="js/login.js"></script>
   <script type="module" src="js/app.js"></script>
+
+  <script>
+    const passwordInput = document.getElementById('password');
+    const passwordToggle = document.getElementById('password-toggle');
+
+    if (passwordInput && passwordToggle) {
+      passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+
+        passwordInput.type = isPassword ? 'text' : 'password';
+
+        passwordToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password'
+        );
+
+        passwordToggle.setAttribute(
+          'aria-pressed',
+          String(isPassword)
+        );
+
+        passwordToggle.innerHTML = isPassword
+          ? '<i class="ri-eye-off-line" aria-hidden="true"></i>'
+          : '<i class="ri-eye-line" aria-hidden="true"></i>';
+      });
+    }
+  </script>
+
 </body>
+
 </html>

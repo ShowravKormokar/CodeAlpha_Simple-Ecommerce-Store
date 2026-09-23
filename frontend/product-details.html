@@ -1,83 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product Details — Simple E-commerce Store</title>
+  <meta name="description"
+    content="View product details, pricing, availability, ratings, and add products to your cart." />
+  <meta name="theme-color" content="#111827" />
+  <title>Product Details | Simple E-commerce Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/product-details.css" />
   <link rel="stylesheet" href="css/rating.css" />
 </head>
-<body>
+
+<body> <!-- ==================== HEADER ==================== -->
   <header class="site-header">
-    <nav class="nav">
-      <a class="nav-brand" href="index.html">Simple E-commerce Store</a>
-      <ul class="nav-links">
-        <li><a href="index.html">Home</a></li>
-        <li><a href="products.html">Products</a></li>
-        <li><a href="#" class="disabled">Login</a></li>
-        <li><a href="#" class="disabled">Register</a></li>
-        <li><a href="#" class="disabled">Cart</a></li>
-      </ul>
+    <nav class="nav container" aria-label="Main navigation"> <a class="nav-brand" href="index.html"
+        aria-label="Simple E-commerce Store home"> <span class="brand-mark"> <i class="ri-shopping-bag-3-fill"
+            aria-hidden="true"></i> </span> <span class="brand-text"> <span class="brand-name">Simple</span> <span
+            class="brand-subtitle">E-commerce</span> </span> </a>
+      <div class="nav-center">
+        <ul class="nav-links" id="nav-links"> <!-- Populated by app.js --> </ul>
+      </div> <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu"
+        aria-expanded="false" aria-controls="nav-links"> <i class="ri-menu-line" aria-hidden="true"></i> </button>
     </nav>
-  </header>
-
+  </header> <!-- ==================== MAIN ==================== -->
   <main>
-    <div class="back-link">
-      <a class="btn btn-secondary" href="products.html">&larr; Back to Products</a>
-    </div>
-
-    <div id="details-container">
-      <div class="loading" id="loading">
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading product...</p>
-      </div>
-
-      <div class="error-state" id="error-state" style="display: none;">
-        <h2>Unable to load product</h2>
-        <p>There was a problem fetching product details.</p>
-      </div>
-
-      <div class="not-found-state" id="not-found-state" style="display: none;">
-        <h2>Product not found</h2>
-        <p>The product you are looking for does not exist.</p>
-        <a class="btn btn-secondary" href="products.html">Back to Products</a>
-      </div>
-
-      <div class="invalid-state" id="invalid-state" style="display: none;">
-        <h2>Invalid product</h2>
-        <p>The product ID in the URL is not valid.</p>
-        <a class="btn btn-secondary" href="products.html">Back to Products</a>
-      </div>
-
-      <div class="product-details" id="product-details" style="display: none;">
-        <div class="product-details-image">
-          <img id="detail-image" src="" alt="" />
+    <section class="product-details-page">
+      <div class="container"> <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="index.html"> <i class="ri-home-5-line"
+              aria-hidden="true"></i> Home </a> <i class="ri-arrow-right-s-line" aria-hidden="true"></i> <a
+            href="products.html">Products</a> <i class="ri-arrow-right-s-line" aria-hidden="true"></i> <span>Product
+            Details</span> </nav>
+        <div id="details-container"> <!-- Loading -->
+          <div class="product-state loading" id="loading">
+            <div class="state-icon loading-icon"> <span class="spinner" aria-hidden="true"></span> </div>
+            <h2>Loading product</h2>
+            <p>We're preparing the product details for you.</p>
+          </div> <!-- Error -->
+          <div class="product-state error-state" id="error-state" style="display: none;">
+            <div class="state-icon error-icon"> <i class="ri-error-warning-line" aria-hidden="true"></i> </div>
+            <h2>Unable to load product</h2>
+            <p> We couldn't retrieve this product right now. Please try again later. </p> <a class="btn btn-secondary"
+              href="products.html"> <i class="ri-arrow-left-line" aria-hidden="true"></i> Back to Products </a>
+          </div> <!-- Not found -->
+          <div class="product-state not-found-state" id="not-found-state" style="display: none;">
+            <div class="state-icon"> <i class="ri-search-eye-line" aria-hidden="true"></i> </div>
+            <h2>Product not found</h2>
+            <p> The product you're looking for doesn't exist or may have been removed. </p> <a class="btn btn-primary"
+              href="products.html"> <i class="ri-arrow-left-line" aria-hidden="true"></i> Browse Products </a>
+          </div> <!-- Invalid ID -->
+          <div class="product-state invalid-state" id="invalid-state" style="display: none;">
+            <div class="state-icon error-icon"> <i class="ri-link-unlink-m" aria-hidden="true"></i> </div>
+            <h2>Invalid product</h2>
+            <p> The product ID in the URL is not valid. </p> <a class="btn btn-primary" href="products.html"> <i
+                class="ri-arrow-left-line" aria-hidden="true"></i> Browse Products </a>
+          </div> <!-- Product -->
+          <article class="product-details" id="product-details" style="display: none;"> <!-- Product image -->
+            <div class="product-gallery">
+              <div class="product-image-frame"> <span class="detail-stock-badge" id="detail-stock-badge"> In stock
+                </span> <img id="detail-image" src="" alt="" decoding="async" />
+                <div class="product-image-fallback" id="product-image-fallback" aria-hidden="true"> <i
+                    class="ri-image-line"></i> <span>No image available</span> </div>
+              </div>
+              <div class="gallery-caption"> <i class="ri-shield-check-line" aria-hidden="true"></i> Product information
+                is provided directly by the store. </div>
+            </div> <!-- Product information -->
+            <div class="product-details-info"> <span class="detail-category">PRODUCT</span>
+              <h1 id="detail-name"></h1> <!-- Rating -->
+              <div id="product-rating" class="product-rating" style="display: none;" aria-label="Product rating"></div>
+              <div class="detail-price-row">
+                <p id="detail-price" class="detail-price"></p>
+              </div>
+              <div class="detail-divider"></div>
+              <p id="detail-description" class="detail-description"></p> <!-- Availability -->
+              <div class="availability-box">
+                <div class="availability-icon"> <i class="ri-checkbox-circle-line" aria-hidden="true"></i> </div>
+                <div> <span class="availability-label">Availability</span>
+                  <p id="detail-stock" class="detail-stock"></p>
+                </div>
+              </div> <!-- Quantity -->
+              <div class="purchase-section">
+                <div class="purchase-label-row"> <span class="purchase-label">Quantity</span> <span
+                    class="purchase-hint" id="quantity-hint"> Select quantity </span> </div>
+                <div class="purchase-controls">
+                  <div class="qty-selector" id="qty-selector"> <button type="button" class="qty-btn" id="qty-dec"
+                      aria-label="Decrease quantity"> <i class="ri-subtract-line" aria-hidden="true"></i> </button>
+                    <input type="number" id="qty-input" class="qty-input" value="1" min="1" max="1" inputmode="numeric"
+                      aria-label="Product quantity" /> <button type="button" class="qty-btn" id="qty-inc"
+                      aria-label="Increase quantity"> <i class="ri-add-line" aria-hidden="true"></i> </button>
+                  </div>
+                  <button class="btn btn-primary add-to-cart-btn" id="add-to-cart" type="button"> <i
+                      class="ri-shopping-bag-line" aria-hidden="true"></i> <span>Add to Cart</span> </button>
+                </div>
+              </div> <!-- Purchase reassurance -->
+              <div class="purchase-benefits">
+                <div> <i class="ri-secure-payment-line" aria-hidden="true"></i> <span>Secure account</span> </div>
+                <div> <i class="ri-refresh-line" aria-hidden="true"></i> <span>Simple checkout</span> </div>
+                <div> <i class="ri-checkbox-circle-line" aria-hidden="true"></i> <span>Stock verified</span> </div>
+              </div>
+            </div>
+          </article>
         </div>
-        <div class="product-details-info">
-          <h1 id="detail-name"></h1>
-          <div id="product-rating" class="product-rating" style="display: none;"></div>
-          <p id="detail-price" class="detail-price"></p>
-          <p id="detail-description" class="detail-description"></p>
-          <p id="detail-stock" class="detail-stock"></p>
-
-          <div class="qty-selector" id="qty-selector">
-            <button type="button" class="qty-btn" id="qty-dec" aria-label="Decrease quantity">−</button>
-            <input type="number" id="qty-input" class="qty-input" value="1" min="1" max="1" />
-            <button type="button" class="qty-btn" id="qty-inc" aria-label="Increase quantity">+</button>
-          </div>
-
-          <button class="btn btn-primary" id="add-to-cart">Add to Cart</button>
-        </div>
       </div>
-    </div>
-  </main>
-
+    </section>
+  </main> <!-- ==================== FOOTER ==================== -->
   <footer class="site-footer">
-    <p>&copy; 2026 Simple E-commerce Store</p>
+    <div class="container footer-main">
+      <div class="footer-brand"> <a class="nav-brand" href="index.html"> <span class="brand-mark"> <i
+              class="ri-shopping-bag-3-fill" aria-hidden="true"></i> </span> <span class="brand-text"> <span
+              class="brand-name">Simple</span> <span class="brand-subtitle">E-commerce</span> </span> </a>
+        <p> A simple, modern shopping experience built for everyday online shopping. </p>
+      </div>
+      <div class="footer-column">
+        <h3>Shop</h3> <a href="products.html">Products</a> <a href="cart.html">Cart</a>
+      </div>
+      <div class="footer-column">
+        <h3>Account</h3> <a href="login.html">Login</a> <a href="register.html">Create account</a> <a
+          href="orders.html">My orders</a>
+      </div>
+      <div class="footer-column">
+        <h3>Explore</h3> <a href="index.html">Home</a> <a href="products.html">Collection</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; 2026 Simple E-commerce Store. All rights reserved.</p>
+      <div class="footer-bottom-links"> <span>Built for a simple shopping experience.</span> </div>
+    </div>
   </footer>
-
   <script type="module" src="js/api.js"></script>
   <script type="module" src="js/product-details.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
+
 </html>

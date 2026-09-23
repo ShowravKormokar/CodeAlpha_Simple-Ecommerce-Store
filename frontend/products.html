@@ -1,54 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Products — Simple E-commerce Store</title>
+  <meta name="description" content="Browse the complete product collection at Simple E-commerce Store." />
+  <meta name="theme-color" content="#111827" />
+  <title>Products | Simple E-commerce Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/products.css" />
 </head>
-<body>
+
+<body> <!-- ==================== HEADER ==================== -->
   <header class="site-header">
-    <nav class="nav">
-      <a class="nav-brand" href="index.html">Simple E-commerce Store</a>
-      <ul class="nav-links" id="nav-links">
-        </ul>
+    <nav class="nav container" aria-label="Main navigation"> <a class="nav-brand" href="index.html"
+        aria-label="Simple E-commerce Store home"> <span class="brand-mark"> <i class="ri-shopping-bag-3-fill"
+            aria-hidden="true"></i> </span> <span class="brand-text"> <span class="brand-name">Simple</span> <span
+            class="brand-subtitle">E-commerce</span> </span> </a>
+      <div class="nav-center">
+        <ul class="nav-links" id="nav-links"> <!-- Populated by app.js --> </ul>
+      </div> <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu"
+        aria-expanded="false" aria-controls="nav-links"> <i class="ri-menu-line" aria-hidden="true"></i> </button>
     </nav>
-  </header>
-
+  </header> <!-- ==================== MAIN ==================== -->
   <main>
-    <div class="page-header">
-      <h1>Products</h1>
-      <p>Browse our collection of products.</p>
-    </div>
-
-    <div id="products-container">
-      <div class="loading" id="loading">
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading products...</p>
+    <section class="products-page">
+      <div class="container"> <!-- Page heading -->
+        <div class="products-page-header">
+          <div class="products-heading-content"> <span class="section-eyebrow">OUR COLLECTION</span>
+            <h1>Explore our products</h1>
+            <p> Discover carefully selected products and find something you'll love. </p>
+          </div>
+          <div class="products-header-meta">
+            <div class="product-count" id="product-count" aria-live="polite"> <i class="ri-shopping-bag-3-line"
+                aria-hidden="true"></i> <span>Loading products...</span> </div>
+          </div>
+        </div> <!-- Product toolbar -->
+        <div class="products-toolbar">
+          <div class="toolbar-intro"> <span class="toolbar-dot"></span> <span>Available products</span> </div>
+          <div class="toolbar-actions"> <a class="toolbar-cart-link" href="cart.html"> <i class="ri-shopping-bag-line"
+                aria-hidden="true"></i> View cart </a> </div>
+        </div> <!-- ==================== PRODUCTS CONTAINER ==================== -->
+        <div id="products-container"> <!-- Loading -->
+          <div class="products-state loading" id="loading">
+            <div class="state-icon loading-icon"> <span class="spinner" aria-hidden="true"></span> </div>
+            <h2>Loading products</h2>
+            <p>We're getting the latest products for you.</p>
+          </div> <!-- Empty -->
+          <div class="products-state empty-state" id="empty-state" style="display: none;">
+            <div class="state-icon"> <i class="ri-shopping-bag-3-line" aria-hidden="true"></i> </div>
+            <h2>No products available</h2>
+            <p> There are no products available right now. Please check back later. </p> <a class="btn btn-primary"
+              href="index.html"> <i class="ri-home-5-line" aria-hidden="true"></i> Back Home </a>
+          </div> <!-- Error -->
+          <div class="products-state error-state" id="error-state" style="display: none;">
+            <div class="state-icon error-icon"> <i class="ri-error-warning-line" aria-hidden="true"></i> </div>
+            <h2>Unable to load products</h2>
+            <p> We couldn't connect to the store right now. Please try again. </p> <button class="btn btn-primary"
+              id="retry-btn" type="button"> <i class="ri-refresh-line" aria-hidden="true"></i> Try again </button>
+          </div> <!-- Products -->
+          <div class="products-grid" id="products-grid" style="display: none;" aria-live="polite"></div>
+        </div>
       </div>
-
-      <div class="empty-state" id="empty-state" style="display: none;">
-        <h2>No products available</h2>
-        <p>Check back later for new products.</p>
-      </div>
-
-      <div class="error-state" id="error-state" style="display: none;">
-        <h2>Unable to load products</h2>
-        <p>There was a problem fetching products from the server.</p>
-        <button class="btn btn-secondary" id="retry-btn">Retry</button>
-      </div>
-
-      <div class="products-grid" id="products-grid" style="display: none;"></div>
-    </div>
-  </main>
-
+    </section>
+  </main> <!-- ==================== FOOTER ==================== -->
   <footer class="site-footer">
-    <p>&copy; 2026 Simple E-commerce Store</p>
+    <div class="container footer-main">
+      <div class="footer-brand"> <a class="nav-brand" href="index.html"> <span class="brand-mark"> <i
+              class="ri-shopping-bag-3-fill" aria-hidden="true"></i> </span> <span class="brand-text"> <span
+              class="brand-name">Simple</span> <span class="brand-subtitle">E-commerce</span> </span> </a>
+        <p> A simple, modern shopping experience built for everyday online shopping. </p>
+      </div>
+      <div class="footer-column">
+        <h3>Shop</h3> <a href="products.html">Products</a> <a href="cart.html">Cart</a>
+      </div>
+      <div class="footer-column">
+        <h3>Account</h3> <a href="login.html">Login</a> <a href="register.html">Create account</a> <a
+          href="orders.html">My orders</a>
+      </div>
+      <div class="footer-column">
+        <h3>Explore</h3> <a href="index.html">Home</a> <a href="products.html">Collection</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; 2026 Simple E-commerce Store. All rights reserved.</p>
+      <div class="footer-bottom-links"> <span>Built for a simple shopping experience.</span> </div>
+    </div>
   </footer>
-
   <script type="module" src="js/api.js"></script>
   <script type="module" src="js/products.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
+
 </html>
