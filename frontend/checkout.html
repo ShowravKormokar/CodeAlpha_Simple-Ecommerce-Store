@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Simple E-commerce Store</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/checkout.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+
+<body>
+  <header class="site-header">
+    <nav class="nav container" aria-label="Main navigation"> <a class="nav-brand" href="index.html"
+        aria-label="Simple E-commerce Store home"> <span class="brand-mark"> <i class="ri-shopping-bag-3-fill"
+            aria-hidden="true"></i> </span> <span class="brand-text"> <span class="brand-name">Simple</span> <span
+            class="brand-subtitle">E-commerce</span> </span> </a>
+      <div class="nav-center">
+        <ul class="nav-links" id="nav-links"> <!-- Populated by app.js --> </ul>
+      </div> <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation menu"
+        aria-expanded="false" aria-controls="nav-links"> <i class="ri-menu-line" aria-hidden="true"></i> </button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-header">
+      <h1>Checkout</h1>
+      <p>Enter your shipping details to complete your order.</p>
+    </div>
+
+    <div id="checkout-container">
+      <div class="loading" id="loading" style="display: none;">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading order summary...</p>
+      </div>
+
+      <div class="error-state" id="error-state" style="display: none;">
+        <h2>Unable to load checkout</h2>
+        <p id="error-message">There was a problem loading your cart.</p>
+        <a class="btn btn-secondary" href="cart.html">&larr; Back to Cart</a>
+      </div>
+
+      <div class="empty-state" id="empty-state" style="display: none;">
+        <h2>Your cart is empty</h2>
+        <p>Add some products before checking out.</p>
+        <a class="btn btn-primary" href="products.html">Browse Products</a>
+      </div>
+
+      <div id="checkout-content" style="display: none;">
+        <div class="checkout-grid">
+          <section class="checkout-form-section">
+            <h2>Shipping Information</h2>
+
+            <form id="checkout-form" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="shipping-name">Full Name <span class="required">*</span></label>
+                  <input type="text" id="shipping-name" name="shippingName" required autocomplete="shipping name" />
+                  <span class="error-text" id="error-shipping-name"></span>
+                </div>
+                <div class="form-group">
+                  <label for="shipping-email">Email <span class="required">*</span></label>
+                  <input type="email" id="shipping-email" name="shippingEmail" required autocomplete="shipping email" />
+                  <span class="error-text" id="error-shipping-email"></span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="shipping-phone">Phone Number <span class="required">*</span></label>
+                <input type="tel" id="shipping-phone" name="shippingPhone" required autocomplete="shipping tel"
+                  placeholder="+1 (555) 123-4567" />
+                <span class="error-text" id="error-shipping-phone"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="shipping-address-line1">Address Line 1 <span class="required">*</span></label>
+                <input type="text" id="shipping-address-line1" name="shippingAddressLine1" required
+                  autocomplete="shipping street-address" placeholder="Street address, P.O. box" />
+                <span class="error-text" id="error-shipping-address-line1"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="shipping-address-line2">Address Line 2</label>
+                <input type="text" id="shipping-address-line2" name="shippingAddressLine2"
+                  autocomplete="shipping address-line2" placeholder="Apartment, suite, unit, etc. (optional)" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="shipping-city">City <span class="required">*</span></label>
+                  <input type="text" id="shipping-city" name="shippingCity" required autocomplete="shipping city" />
+                  <span class="error-text" id="error-shipping-city"></span>
+                </div>
+                <div class="form-group">
+                  <label for="shipping-state">State / Province <span class="required">*</span></label>
+                  <input type="text" id="shipping-state" name="shippingState" required
+                    autocomplete="shipping address-level1" />
+                  <span class="error-text" id="error-shipping-state"></span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="shipping-postal-code">Postal Code <span class="required">*</span></label>
+                  <input type="text" id="shipping-postal-code" name="shippingPostalCode" required
+                    autocomplete="shipping postal-code" />
+                  <span class="error-text" id="error-shipping-postal-code"></span>
+                </div>
+                <div class="form-group">
+                  <label for="shipping-country">Country <span class="required">*</span></label>
+                  <input type="text" id="shipping-country" name="shippingCountry" required
+                    autocomplete="shipping country" value="United States" />
+                  <span class="error-text" id="error-shipping-country"></span>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <a class="btn btn-secondary" href="cart.html">&larr; Back to Cart</a>
+                <button type="submit" class="btn btn-primary" id="place-order-btn">
+                  <span class="btn-text">Place Order</span>
+                  <span class="btn-loading" style="display: none;">Processing...</span>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="order-summary-section">
+            <h2>Order Summary</h2>
+
+            <div id="order-summary-items" class="order-summary-items"></div>
+
+            <div class="order-summary-totals">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="summary-subtotal">$0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>Shipping</span>
+                <strong id="summary-shipping">$0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>Tax</span>
+                <strong id="summary-tax">$0.00</strong>
+              </div>
+              <div class="summary-divider"></div>
+              <div class="summary-row summary-total">
+                <span>Total</span>
+                <strong id="summary-total">$0.00</strong>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <div class="footer-brand">
+        <a class="nav-brand" href="index.html">
+          <span class="brand-mark">
+            <i class="ri-shopping-bag-3-fill" aria-hidden="true"></i>
+          </span>
+
+          <span class="brand-text">
+            <span class="brand-name">Simple</span>
+            <span class="brand-subtitle">E-commerce</span>
+          </span>
+        </a>
+
+        <p>
+          A simple, modern shopping experience built for everyday online
+          shopping.
+        </p>
+      </div>
+
+      <div class="footer-column">
+        <h3>Shop</h3>
+        <a href="products.html">Products</a>
+        <a href="cart.html">Cart</a>
+      </div>
+
+      <div class="footer-column">
+        <h3>Account</h3>
+        <a href="login.html">Login</a>
+        <a href="register.html">Create account</a>
+        <a href="orders.html">My orders</a>
+      </div>
+
+      <div class="footer-column">
+        <h3>Explore</h3>
+        <a href="index.html">Home</a>
+        <a href="products.html">Collection</a>
+      </div>
+    </div>
+
+    <div class="container footer-bottom">
+      <p>&copy; 2026 Simple E-commerce Store. All rights reserved.</p>
+
+      <div class="footer-bottom-links">
+        <span>Built for a simple shopping experience.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/api.js"></script>
+  <script type="module" src="js/cart.js"></script>
+  <script type="module" src="js/checkout.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
