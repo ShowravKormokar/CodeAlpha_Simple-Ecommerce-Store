@@ -1,5 +1,6 @@
 import { getProductById } from "./api.js";
 import * as cart from "./cart.js";
+import { createStarDisplay } from "./stars.js";
 
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error-state");
@@ -12,6 +13,7 @@ const detailName = document.getElementById("detail-name");
 const detailPrice = document.getElementById("detail-price");
 const detailDescription = document.getElementById("detail-description");
 const detailStock = document.getElementById("detail-stock");
+const productRatingEl = document.getElementById("product-rating");
 
 const qtyDec = document.getElementById("qty-dec");
 const qtyInput = document.getElementById("qty-input");
@@ -68,6 +70,9 @@ function showDetails(product) {
   detailStock.textContent = formatStock(product.stock_quantity);
   detailStock.className = "detail-stock " + stockClass(product.stock_quantity);
 
+  // Render product rating summary.
+  renderProductRating(product.rating);
+
   currentProduct = product;
 
   const stockNum = Number(product.stock_quantity);
@@ -84,6 +89,40 @@ function showDetails(product) {
     addToCartBtn.textContent = "Add to Cart";
     qtyInc.disabled = false;
     qtyDec.disabled = false;
+  }
+}
+
+function renderProductRating(ratingSummary) {
+  if (!ratingSummary) {
+    productRatingEl.style.display = "none";
+    return;
+  }
+
+  const { average, count } = ratingSummary;
+
+  productRatingEl.innerHTML = "";
+  productRatingEl.style.display = "flex";
+  productRatingEl.style.alignItems = "center";
+  productRatingEl.style.flexWrap = "wrap";
+
+  const stars = createStarDisplay(average);
+  productRatingEl.appendChild(stars);
+
+  if (count > 0) {
+    const avgSpan = document.createElement("span");
+    avgSpan.className = "rating-average";
+    avgSpan.textContent = average.toFixed(1);
+    productRatingEl.appendChild(avgSpan);
+
+    const countSpan = document.createElement("span");
+    countSpan.className = "rating-count";
+    countSpan.textContent = `(${count} rating${count > 1 ? "s" : ""})`;
+    productRatingEl.appendChild(countSpan);
+  } else {
+    const noRatings = document.createElement("span");
+    noRatings.className = "no-ratings";
+    noRatings.textContent = "No ratings yet";
+    productRatingEl.appendChild(noRatings);
   }
 }
 

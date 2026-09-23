@@ -77,6 +77,8 @@ CREATE TABLE order_items (
     quantity    INTEGER         NOT NULL CHECK (quantity > 0),
     unit_price  NUMERIC(10,2)   NOT NULL CHECK (unit_price >= 0),
     subtotal    NUMERIC(10,2)   NOT NULL CHECK (subtotal >= 0),
+    rating      INTEGER,                              -- 1–5, NULL = not yet rated
+    rated_at    TIMESTAMPTZ,                            -- when the rating was submitted
     created_at  TIMESTAMPTZ      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_order_items_order
@@ -85,9 +87,14 @@ CREATE TABLE order_items (
 
     CONSTRAINT fk_order_items_product
         FOREIGN KEY (product_id) REFERENCES products(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+
+    CONSTRAINT chk_order_items_rating_range
+        CHECK (rating IS NULL OR rating BETWEEN 1 AND 5)
 );
 
 -- Indexes for the most common relationship lookups.
 CREATE INDEX idx_order_items_order_id   ON order_items (order_id);
 CREATE INDEX idx_order_items_product_id ON order_items (product_id);
+CREATE INDEX idx_order_items_product_rated ON order_items (product_id)
+    WHERE rating IS NOT NULL;

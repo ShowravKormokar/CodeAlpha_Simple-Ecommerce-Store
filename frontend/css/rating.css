@@ -1,0 +1,135 @@
+/* ---------- Star rating component ---------- */
+.star-rating {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 4px;
+  user-select: none;
+}
+
+.star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.6em;
+  color: #ccc;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s ease, transform 0.15s ease;
+  font-family: inherit;
+}
+
+.star.is-filled {
+  color: #ffc107;
+}
+
+.star:hover,
+.star:focus {
+  color: #ffc107;
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.star:focus-visible {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* Read-only stars — no hover/focus effects */
+.star[aria-hidden="true"] {
+  cursor: default;
+}
+
+.star[aria-hidden="true"]:hover,
+.star[aria-hidden="true"]:focus {
+  color: inherit;
+  outline: none;
+}
+
+/* ---------- Rating display on product details ---------- */
+.product-rating {
+  margin: 8px 0 16px;
+}
+
+.product-rating .rating-average {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-left: 8px;
+}
+
+.product-rating .rating-count {
+  color: #777;
+  font-size: 0.9em;
+  margin-left: 8px;
+}
+
+.no-ratings {
+  color: #999;
+  font-size: 0.95em;
+  margin: 8px 0 16px;
+}
+
+/* ---------- Rating section on order details ---------- */
+.rating-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #ddd;
+}
+
+.rating-label {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+}
+
+.rating-status {
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.rating-actions {
+  margin-top: 10px;
+}
+
+.rating-message {
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: #27ae60;
+}
+
+.rating-message.error {
+  color: #e74c3c;
+}
+
+/* ---------- Submit rating button ---------- */
+.btn-rating {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.btn-rating:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.btn-rating:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .star {
+    font-size: 1.4em;
+  }
+}

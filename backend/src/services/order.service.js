@@ -264,7 +264,9 @@ async function getOrderByIdAndUser(orderId, userId) {
         p.name AS product_name,
         oi.quantity,
         oi.unit_price,
-        oi.subtotal
+        oi.subtotal,
+        oi.rating,
+        oi.rated_at
      FROM order_items oi
      JOIN products p
        ON p.id = oi.product_id
@@ -286,6 +288,8 @@ async function getOrderByIdAndUser(orderId, userId) {
       quantity: row.quantity,
       unitPrice: row.unit_price,
       subtotal: row.subtotal,
+      rating: row.rating,
+      ratedAt: row.rated_at,
     })),
   };
 }

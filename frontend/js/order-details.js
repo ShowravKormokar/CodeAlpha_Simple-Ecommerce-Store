@@ -1,4 +1,5 @@
-import { getOrderById } from "./api.js";
+import { getOrderById, submitOrderItemRating } from "./api.js";
+import { createStarSelector, createStarDisplay, setStarValue } from "./stars.js";
 
 const loadingEl = document.getElementById("loading");
 const errorEl = document.getElementById("error-state");
@@ -106,6 +107,8 @@ function renderDetails(order) {
   const itemsList = document.createElement("ul");
   itemsList.className = "order-items-list";
 
+  const isCompleted = order.status === "completed";
+
   (order.items || []).forEach((item) => {
     const li = document.createElement("li");
     li.className = "order-item";
@@ -131,6 +134,97 @@ function renderDetails(order) {
     li.appendChild(unit);
     li.appendChild(sub);
 
+    // Rating section for each item
+    const ratingSection = document.createElement("div");
+    ratingSection.className = "rating-section";
+
+    const ratingLabel = document.createElement("p");
+    ratingLabel.className = "rating-label";
+    ratingLabel.textContent = "Your Rating";
+    ratingSection.appendChild(ratingLabel);
+
+    const hasRating = item.rating !== null && item.rating !== undefined;
+
+    if (hasRating) {
+      // Already rated — show read-only stars
+      const stars = createStarDisplay(item.rating);
+      stars.classList.add("rated-display");
+      ratingSection.appendChild(stars);
+
+      const ratedStatus = document.createElement("p");
+      ratedStatus.className = "rating-status";
+      ratedStatus.textContent = "Rated";
+      ratingSection.appendChild(ratedStatus);
+    } else if (isCompleted) {
+      // Not rated yet and order is completed — show interactive stars
+      const selector = createStarSelector(0);
+      selector.id = `rating-selector-${item.id}`;
+      ratingSection.appendChild(selector);
+
+      let selectedRating = 0;
+
+      selector.addEventListener("star-select", (e) => {
+        selectedRating = e.detail.value;
+      });
+
+      const submitBtn = document.createElement("button");
+      submitBtn.className = "btn btn-rating";
+      submitBtn.textContent = "Submit Rating";
+      submitBtn.disabled = true;
+      submitBtn.addEventListener("click", async () => {
+        if (selectedRating === 0) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting...";
+
+        const messageEl = document.createElement("p");
+        messageEl.className = "rating-message";
+        ratingSection.appendChild(messageEl);
+
+        try {
+          const result = await submitOrderItemRating(order.id, item.id, selectedRating);
+
+          if (result.status === 200 && result.data?.success) {
+            messageEl.textContent = "Rating submitted successfully";
+            messageEl.classList.remove("error");
+
+            // Replace selector with read-only display
+            ratingSection.innerHTML = "";
+            ratingSection.appendChild(ratingLabel);
+
+            const stars = createStarDisplay(result.data.data.rating);
+            stars.classList.add("rated-display");
+            ratingSection.appendChild(stars);
+
+            const ratedStatus = document.createElement("p");
+            ratedStatus.className = "rating-status";
+            ratedStatus.textContent = "Rated";
+            ratingSection.appendChild(ratedStatus);
+          } else {
+            messageEl.textContent = result.data?.message || "Failed to submit rating";
+            messageEl.classList.add("error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Submit Rating";
+          }
+        } catch (error) {
+          console.error("Rating submission error:", error);
+          messageEl.textContent = "An error occurred. Please try again.";
+          messageEl.classList.add("error");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Submit Rating";
+        }
+      });
+
+      // Enable submit button only when a rating is selected
+      selector.addEventListener("star-select", (e) => {
+        selectedRating = e.detail.value;
+        submitBtn.disabled = selectedRating === 0;
+      });
+
+      ratingSection.appendChild(submitBtn);
+    }
+
+    li.appendChild(ratingSection);
     itemsList.appendChild(li);
   });
 
@@ -167,7 +261,6 @@ async function loadOrder() {
     const result = await getOrderById(id);
 
     if (!result.authenticated) {
-      // 401 — prompt login
       errorEl.innerHTML = `
         <h2>Please log in</h2>
         <p>You need to be logged in to view order details.</p>`;

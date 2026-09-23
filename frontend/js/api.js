@@ -134,3 +134,16 @@ export async function getOrderById(orderId) {
 
   return { authenticated: true, data };
 }
+
+// POST /api/orders/:orderId/items/:orderItemId/rating
+export async function submitOrderItemRating(orderId, orderItemId, rating) {
+  const { response, data } = await request(
+    `/orders/${orderId}/items/${orderItemId}/rating`,
+    {
+      method: "POST",
+      body: JSON.stringify({ rating }),
+    }
+  );
+
+  return { status: response.status, data };
+}
