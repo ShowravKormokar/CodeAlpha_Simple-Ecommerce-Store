@@ -100,6 +100,44 @@ function renderDetails(order) {
   meta.appendChild(date);
   meta.appendChild(total);
 
+  // Shipping information
+  if (order.shippingName || order.shippingAddressLine1) {
+    const shippingSection = document.createElement("div");
+    shippingSection.className = "order-shipping";
+
+    const shippingTitle = document.createElement("h3");
+    shippingTitle.className = "order-shipping-title";
+    shippingTitle.textContent = "Shipping Address";
+    shippingSection.appendChild(shippingTitle);
+
+    const shippingLines = [];
+    if (order.shippingName) shippingLines.push(order.shippingName);
+    if (order.shippingAddressLine1) shippingLines.push(order.shippingAddressLine1);
+    if (order.shippingAddressLine2) shippingLines.push(order.shippingAddressLine2);
+    const cityStateZip = [order.shippingCity, order.shippingState, order.shippingPostalCode].filter(Boolean).join(", ");
+    if (cityStateZip) shippingLines.push(cityStateZip);
+    if (order.shippingCountry) shippingLines.push(order.shippingCountry);
+
+    shippingLines.forEach((line) => {
+      const lineEl = document.createElement("p");
+      lineEl.className = "order-shipping-line";
+      lineEl.textContent = line;
+      shippingSection.appendChild(lineEl);
+    });
+
+    if (order.shippingEmail || order.shippingPhone) {
+      const contactEl = document.createElement("p");
+      contactEl.className = "order-shipping-contact";
+      const contactParts = [];
+      if (order.shippingEmail) contactParts.push(order.shippingEmail);
+      if (order.shippingPhone) contactParts.push(order.shippingPhone);
+      contactEl.textContent = contactParts.join(" · ");
+      shippingSection.appendChild(contactEl);
+    }
+
+    meta.appendChild(shippingSection);
+  }
+
   const itemsTitle = document.createElement("h3");
   itemsTitle.className = "order-items-title";
   itemsTitle.textContent = "Items";

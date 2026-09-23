@@ -107,6 +107,35 @@
   font-size: 1.1em;
 }
 
+/* ---------- Shipping info ---------- */
+.order-shipping {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.order-shipping-title {
+  color: #2c3e50;
+  font-size: 0.95em;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.order-shipping-line {
+  margin: 0;
+  color: #333;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.order-shipping-contact {
+  margin: 8px 0 0 0 !important;
+  color: #666;
+  font-size: 0.85em;
+}
+
 .order-items-title {
   color: #2c3e50;
   margin-bottom: 12px;
