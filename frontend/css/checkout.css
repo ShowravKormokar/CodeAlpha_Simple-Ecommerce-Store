@@ -321,6 +321,20 @@
   font-weight: 800;
 }
 
+.summary-item-price-wrapper {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-direction: column;
+}
+
+.summary-item-regular-price {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
 
 /* =========================================================
    TOTALS

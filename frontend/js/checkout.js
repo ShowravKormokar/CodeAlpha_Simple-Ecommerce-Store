@@ -394,10 +394,64 @@ function renderOrderSummary(items) {
     itemPrice.className =
       "summary-item-price";
 
-    itemPrice.textContent =
-      formatPrice(
-        price * quantity
+    const isSale =
+      Boolean(product.offer_sale) &&
+      product.offer_price != null;
+
+    const hasDiscount =
+      isSale &&
+      product.regular_price != null &&
+      Number(product.regular_price) > 0 &&
+      Number(product.regular_price) >
+        Number(product.price);
+
+    if (hasDiscount) {
+      const priceWrapper =
+        document.createElement("span");
+
+      priceWrapper.className =
+        "summary-item-price-wrapper";
+
+      const currentPrice =
+        document.createElement("span");
+
+      currentPrice.className =
+        "summary-item-current-price";
+
+      currentPrice.textContent =
+        formatPrice(
+          price * quantity
+        );
+
+      const regularPrice =
+        document.createElement("span");
+
+      regularPrice.className =
+        "summary-item-regular-price";
+
+      regularPrice.textContent =
+        formatPrice(
+          Number(product.regular_price) *
+            quantity
+        );
+
+      priceWrapper.appendChild(
+        currentPrice
       );
+
+      priceWrapper.appendChild(
+        regularPrice
+      );
+
+      itemPrice.appendChild(
+        priceWrapper
+      );
+    } else {
+      itemPrice.textContent =
+        formatPrice(
+          price * quantity
+        );
+    }
 
 
     itemEl.appendChild(info);
