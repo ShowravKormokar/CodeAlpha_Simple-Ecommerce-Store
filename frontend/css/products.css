@@ -243,11 +243,11 @@
 
 /* Rating */
 .product-rating {
-  min-height: 24px;
+  min-height: 16px;
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .product-rating-stars {
@@ -279,7 +279,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 4px;
 }
 
 .product-price {
@@ -288,6 +288,49 @@
   font-size: 18px;
   font-weight: 800;
   line-height: 1.1;
+}
+
+.product-price-wrapper {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-regular-price {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-decoration: line-through;
+}
+
+.product-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  color: var(--color-white);
+  background: var(--color-accent);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.product-sale-badge {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  color: var(--color-white);
+  background: var(--color-accent);
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .product-stock {
