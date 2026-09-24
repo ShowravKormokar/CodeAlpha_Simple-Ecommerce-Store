@@ -1,4 +1,4 @@
-import { getCurrentUser, logoutUser, getProducts } from "./api.js";
+import { getCurrentUser, logoutUser, getFeaturedProducts } from "./api.js";
 import * as cart from "./cart.js";
 
 /* =========================================================
@@ -227,7 +227,7 @@ async function loadFeaturedProducts() {
 
     errorState?.classList.add("hidden");
 
-    const result = await getProducts();
+    const result = await getFeaturedProducts();
 
     if (!result || !result.success) {
       throw new Error(result?.message || "Unable to load products.");
@@ -277,7 +277,7 @@ function createProductCard(product) {
   const id = Number(product.id);
   const name = escapeHtml(product.name || "Product");
   const description = escapeHtml(
-    product.description || "Discover this product in our collection."
+    product.short_description || product.description || "Discover this product in our collection."
   );
 
   const price = formatPrice(product.price);
@@ -285,65 +285,94 @@ function createProductCard(product) {
   const stock = Number(product.stock_quantity ?? 0);
   const hasStock = stock > 0;
 
+  const isSale =
+    Boolean(product.offer_sale) && product.offer_price != null;
+
+  const hasDiscount =
+    isSale &&
+    product.regular_price != null &&
+    Number(product.regular_price) > 0 &&
+    Number(product.regular_price) > Number(product.price);
+
+  const priceHtml = hasDiscount
+    ? (() => {
+        const regularPrice = formatPrice(product.regular_price);
+        const discount = Math.round(
+          ((Number(product.regular_price) - Number(product.price)) /
+            Number(product.regular_price)) *
+            100
+        );
+        return `
+          <div class="product-price-wrapper">
+            <span class="product-regular-price">${regularPrice}</span>
+            <span class="product-price">${price}</span>
+            <span class="product-discount-badge">-${discount}%</span>
+          </div>
+        `;
+      })()
+    : `<span class="product-price">${price}</span>`;
+
   const imageUrl = product.image_url
     ? escapeAttribute(product.image_url)
     : "";
 
   const imageMarkup = imageUrl
     ? `
-      <img
-        src="${imageUrl}"
-        alt="${name}"
-        loading="lazy"
-        data-product-image
-      />
-    `
+       <img
+         src="${imageUrl}"
+         alt="${name}"
+         loading="lazy"
+         data-product-image
+       />
+     `
     : `
-      <div class="product-image-placeholder" aria-hidden="true">
-        <i class="ri-image-line"></i>
-      </div>
-    `;
+       <div class="product-image-placeholder" aria-hidden="true">
+         <i class="ri-image-line"></i>
+       </div>
+     `;
 
   return `
-    <article class="product-card" data-product-id="${id}">
-      <a
-        href="product-details.html?id=${encodeURIComponent(id)}"
-        class="product-image"
-        aria-label="View ${name} details"
-      >
-        ${imageMarkup}
+     <article class="product-card" data-product-id="${id}">
+       <a
+         href="product-details.html?id=${encodeURIComponent(id)}"
+         class="product-image"
+         aria-label="View ${name} details"
+       >
+         ${imageMarkup}
 
-        <span class="product-stock-badge ${hasStock ? "" : "out-of-stock"}">
-          ${hasStock ? "In stock" : "Out of stock"}
-        </span>
-      </a>
+         ${isSale ? '<span class="product-sale-badge">Sale</span>' : ""}
 
-      <div class="product-content">
-        <h3 class="product-name" title="${name}">
-          ${name}
-        </h3>
+         <span class="product-stock-badge ${hasStock ? "" : "out-of-stock"}">
+           ${hasStock ? "In stock" : "Out of stock"}
+         </span>
+       </a>
 
-        <p class="product-description">
-          ${description}
-        </p>
+       <div class="product-content">
+         <h3 class="product-name" title="${name}">
+           ${name}
+         </h3>
 
-        <div class="product-footer">
-          <span class="product-price">${price}</span>
+         <p class="product-description">
+           ${description}
+         </p>
 
-          <button
-            class="product-card-button add-to-cart-button"
-            type="button"
-            data-product-id="${id}"
-            aria-label="Add ${name} to cart"
-            title="${hasStock ? "Add to cart" : "Out of stock"}"
-            ${hasStock ? "" : "disabled"}
-          >
-            <i class="ri-shopping-bag-line" aria-hidden="true"></i>
-          </button>
-        </div>
-      </div>
-    </article>
-  `;
+         <div class="product-footer">
+           ${priceHtml}
+
+           <button
+             class="product-card-button add-to-cart-button"
+             type="button"
+             data-product-id="${id}"
+             aria-label="Add ${name} to cart"
+             title="${hasStock ? "Add to cart" : "Out of stock"}"
+             ${hasStock ? "" : "disabled"}
+           >
+             <i class="ri-shopping-bag-line" aria-hidden="true"></i>
+           </button>
+         </div>
+       </div>
+     </article>
+   `;
 }
 
 function attachProductCardEvents() {
