@@ -10,10 +10,25 @@ const detailsEl = document.getElementById("product-details");
 const detailImage = document.getElementById("detail-image");
 const detailImageFallback = document.getElementById("product-image-fallback");
 const detailName = document.getElementById("detail-name");
+const detailCategory = document.getElementById("detail-category");
+const detailBrand = document.getElementById("detail-brand");
 const detailPrice = document.getElementById("detail-price");
+const detailPriceContainer = document.getElementById("detail-price-container");
 const detailDescription = document.getElementById("detail-description");
 const detailStock = document.getElementById("detail-stock");
 const detailStockBadge = document.getElementById("detail-stock-badge");
+const detailSaleBadge = document.getElementById("detail-sale-badge");
+const detailVariantGroup = document.getElementById("detail-variant-group");
+const detailVariant = document.getElementById("detail-variant");
+const detailColorGroup = document.getElementById("detail-color-group");
+const colorOptions = document.getElementById("color-options");
+const detailSizeGroup = document.getElementById("detail-size-group");
+const sizeOptions = document.getElementById("size-options");
+const productOptions = document.getElementById("product-options");
+const specificationsSection = document.getElementById("specifications-section");
+const specificationsContent = document.getElementById("specifications-content");
+const productAttributes = document.getElementById("product-attributes");
+const attributesGrid = document.getElementById("attributes-grid");
 const productRatingEl = document.getElementById("product-rating");
 const qtyDec = document.getElementById("qty-dec");
 const qtyInput = document.getElementById("qty-input");
@@ -82,17 +97,235 @@ function renderProduct(product) {
   currentProduct = product;
 
   detailName.textContent = product.name || "Unnamed product";
-  detailPrice.textContent = formatPrice(product.price);
+  detailCategory.textContent = product.category
+    ? product.category.toUpperCase()
+    : "PRODUCT";
   detailDescription.textContent =
-    product.description || "Discover this product from our collection.";
+    product.short_description || product.description || "Discover this product from our collection.";
 
-  const stock = getStock(product);
-  renderStock(stock);
+  renderBrand(product.brand);
+  renderOfferPricing(product);
+  renderStock(getStock(product));
   renderProductImage(product);
   renderProductRating(product.rating);
-  configureQuantity(stock);
+  renderOptions(product);
+  renderSpecifications(product.specifications);
+  renderAttributes(product);
+  configureQuantity(getStock(product));
 
   showDetails();
+}
+
+function renderBrand(brand) {
+  if (brand) {
+    detailBrand.textContent = brand;
+    detailBrand.style.display = "block";
+  } else {
+    detailBrand.style.display = "none";
+  }
+}
+
+function renderOfferPricing(product) {
+  const isSale =
+    Boolean(product.offer_sale) && product.offer_price != null;
+
+  const hasDiscount =
+    isSale &&
+    product.regular_price != null &&
+    Number(product.regular_price) > 0 &&
+    Number(product.regular_price) > Number(product.price);
+
+  detailPriceContainer.innerHTML = "";
+
+  if (hasDiscount) {
+    const currentPrice = document.createElement("p");
+    currentPrice.className = "detail-price";
+    currentPrice.textContent = formatPrice(product.price);
+
+    const regularPrice = document.createElement("p");
+    regularPrice.className = "detail-regular-price";
+    regularPrice.textContent = formatPrice(product.regular_price);
+
+    const discount = Math.round(
+      ((Number(product.regular_price) - Number(product.price)) /
+        Number(product.regular_price)) *
+        100
+    );
+
+    const discountBadge = document.createElement("span");
+    discountBadge.className = "detail-discount-badge";
+    discountBadge.innerHTML = `
+      <i class="ri-arrow-down-circle-line" aria-hidden="true"></i>
+      ${discount}% OFF
+    `;
+
+    detailPriceContainer.appendChild(currentPrice);
+    detailPriceContainer.appendChild(regularPrice);
+    detailPriceContainer.appendChild(discountBadge);
+
+    detailPriceContainer.classList.add("has-discount");
+  } else {
+    const currentPrice = document.createElement("p");
+    currentPrice.id = "detail-price";
+    currentPrice.className = "detail-price";
+    currentPrice.textContent = formatPrice(product.price);
+
+    detailPriceContainer.appendChild(currentPrice);
+    detailPriceContainer.classList.remove("has-discount");
+  }
+}
+
+function renderOptions(product) {
+  const hasVariant = product.variant;
+  const hasColors = Array.isArray(product.colors) && product.colors.length > 0;
+  const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;
+
+  if (!hasVariant && !hasColors && !hasSizes) {
+    productOptions.style.display = "none";
+    return;
+  }
+
+  productOptions.style.display = "flex";
+
+  if (hasVariant) {
+    detailVariantGroup.style.display = "block";
+    detailVariant.textContent = product.variant;
+  } else {
+    detailVariantGroup.style.display = "none";
+  }
+
+  if (hasColors) {
+    detailColorGroup.style.display = "block";
+    colorOptions.innerHTML = "";
+    product.colors.forEach((color) => {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "color-swatch";
+      swatch.textContent = color;
+      swatch.setAttribute("aria-label", `Color: ${color}`);
+      if (color.toLowerCase().includes("black")) {
+        swatch.classList.add("color-black");
+      } else if (color.toLowerCase().includes("white")) {
+        swatch.classList.add("color-white");
+      } else if (color.toLowerCase().includes("blue")) {
+        swatch.classList.add("color-blue");
+      } else if (color.toLowerCase().includes("red")) {
+        swatch.classList.add("color-red");
+      } else if (color.toLowerCase().includes("silver")) {
+        swatch.classList.add("color-silver");
+      }
+      swatch.addEventListener("click", () => {
+        colorOptions
+          .querySelectorAll(".color-swatch")
+          .forEach((s) => s.classList.remove("selected"));
+        swatch.classList.add("selected");
+      });
+      colorOptions.appendChild(swatch);
+    });
+  } else {
+    detailColorGroup.style.display = "none";
+  }
+
+  if (hasSizes) {
+    detailSizeGroup.style.display = "block";
+    sizeOptions.innerHTML = "";
+    product.sizes.forEach((size) => {
+      const label = document.createElement("label");
+      label.className = "size-option";
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "size";
+      input.value = size;
+      input.setAttribute("aria-label", `Size: ${size}`);
+      const span = document.createElement("span");
+      span.textContent = size;
+      label.appendChild(input);
+      label.appendChild(span);
+      sizeOptions.appendChild(label);
+    });
+  } else {
+    detailSizeGroup.style.display = "none";
+  }
+}
+
+function renderSpecifications(specifications) {
+  const specs =
+    specifications && typeof specifications === "object" && !Array.isArray(specifications)
+      ? specifications
+      : {};
+
+  const keys = Object.keys(specs);
+  if (keys.length === 0) {
+    specificationsSection.style.display = "none";
+    return;
+  }
+
+  specificationsSection.style.display = "block";
+  specificationsContent.innerHTML = "";
+
+  const table = document.createElement("table");
+  table.className = "specifications-table";
+
+  keys.forEach((key) => {
+    const tr = document.createElement("tr");
+
+    const labelCell = document.createElement("th");
+    labelCell.scope = "row";
+    labelCell.textContent = key;
+
+    const valueCell = document.createElement("td");
+    valueCell.textContent = String(specs[key] ?? "");
+
+    tr.appendChild(labelCell);
+    tr.appendChild(valueCell);
+    table.appendChild(tr);
+  });
+
+  specificationsContent.appendChild(table);
+}
+
+function renderAttributes(product) {
+  const attributes = [];
+
+  if (product.brand) attributes.push(["Brand", product.brand]);
+  if (product.vendor) attributes.push(["Vendor", product.vendor]);
+  if (product.made_in) attributes.push(["Made In", product.made_in]);
+  if (product.material) attributes.push(["Material", product.material]);
+  if (product.warranty) attributes.push(["Warranty", product.warranty]);
+  if (product.weight != null) attributes.push(["Weight", `${product.weight} kg`]);
+  if (product.unit) attributes.push(["Unit", product.unit]);
+  if (product.barcode) attributes.push(["Barcode", product.barcode]);
+  if (product.sku) attributes.push(["SKU", product.sku]);
+
+  const hasTags = Array.isArray(product.tags) && product.tags.length > 0;
+  if (hasTags) {
+    attributes.push(["Tags", product.tags.join(", ")]);
+  }
+
+  if (attributes.length === 0) {
+    productAttributes.style.display = "none";
+    return;
+  }
+
+  productAttributes.style.display = "block";
+  attributesGrid.innerHTML = "";
+
+  attributes.forEach(([label, value]) => {
+    const row = document.createElement("div");
+    row.className = "attribute-row";
+
+    const labelEl = document.createElement("span");
+    labelEl.className = "attribute-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("span");
+    valueEl.className = "attribute-value";
+    valueEl.textContent = value;
+
+    row.appendChild(labelEl);
+    row.appendChild(valueEl);
+    attributesGrid.appendChild(row);
+  });
 }
 
 function getStock(product) {
@@ -110,6 +343,16 @@ function getStock(product) {
 function renderProductImage(product) {
   detailImageFallback.classList.remove("visible");
   detailImage.alt = product.name || "Product image";
+
+  const isSale =
+    Boolean(product.offer_sale) && product.offer_price != null;
+  const hasDiscount =
+    isSale &&
+    product.regular_price != null &&
+    Number(product.regular_price) > 0 &&
+    Number(product.regular_price) > Number(product.price);
+
+  detailSaleBadge.style.display = hasDiscount ? "inline-flex" : "none";
 
   const imageUrl = product.image_url?.trim();
   if (!imageUrl) {
