@@ -39,13 +39,44 @@ CREATE TABLE users (
 CREATE TABLE products (
     id             BIGSERIAL      PRIMARY KEY,
     name           VARCHAR(255)   NOT NULL,
+    slug           VARCHAR(255),
+    sku            VARCHAR(100),
+    brand          VARCHAR(255),
+    category       VARCHAR(255),
+    subcategory    VARCHAR(255),
     description    TEXT,
+    short_description TEXT,
     price          NUMERIC(10,2)  NOT NULL CHECK (price >= 0),
+    regular_price  NUMERIC(10,2) CHECK (regular_price >= 0),
+    offer_price    NUMERIC(10,2) CHECK (offer_price >= 0),
+    offer_sale     BOOLEAN        NOT NULL DEFAULT FALSE,
     image_url      TEXT,
     stock_quantity INTEGER        NOT NULL CHECK (stock_quantity >= 0),
+    low_stock_threshold INTEGER    NOT NULL DEFAULT 5 CHECK (low_stock_threshold >= 0),
+    is_active      BOOLEAN        NOT NULL DEFAULT TRUE,
+    is_featured    BOOLEAN        NOT NULL DEFAULT FALSE,
+    colors         TEXT[]         NOT NULL DEFAULT '{}',
+    sizes          TEXT[]         NOT NULL DEFAULT '{}',
+    variant        TEXT,
+    specifications JSONB          NOT NULL DEFAULT '{}',
+    vendor         TEXT,
+    made_in        TEXT,
+    barcode        VARCHAR(100),
+    weight         NUMERIC(10,3) CHECK (weight >= 0),
+    unit           VARCHAR(50),
+    material       TEXT,
+    warranty       TEXT,
+    tags           TEXT[]         NOT NULL DEFAULT '{}',
     created_at     TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at     TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uk_products_sku  UNIQUE (sku),
+    CONSTRAINT uk_products_slug UNIQUE (slug)
 );
+
+-- Indexes for listing and filtering
+CREATE INDEX IF NOT EXISTS idx_products_is_active   ON products (is_active);
+CREATE INDEX IF NOT EXISTS idx_products_is_featured ON products (is_featured);
 
 -- ------------------------------------------------------------
 -- orders
