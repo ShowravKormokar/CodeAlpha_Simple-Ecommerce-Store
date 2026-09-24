@@ -112,6 +112,21 @@ function createProductCard(product) {
     ? `<i class="ri-checkbox-circle-line" aria-hidden="true"></i> In stock`
     : `<i class="ri-close-circle-line" aria-hidden="true"></i> Out of stock`;
 
+  const isSale =
+    Boolean(product.offer_sale) && product.offer_price != null;
+  const hasDiscount =
+    isSale &&
+    product.regular_price != null &&
+    Number(product.regular_price) > 0 &&
+    Number(product.regular_price) > Number(product.price);
+
+  // if (hasDiscount) {
+  //   const saleBadge = document.createElement("span");
+  //   saleBadge.className = "product-sale-badge";
+  //   saleBadge.textContent = "Sale";
+  //   imageLink.appendChild(saleBadge);
+  // }
+
   imageLink.appendChild(imageWrapper);
   imageLink.appendChild(badge);
 
@@ -121,7 +136,7 @@ function createProductCard(product) {
 
   const category = document.createElement("span");
   category.className = "product-category";
-  category.textContent = "Product";
+  category.textContent = product.category || product.subcategory || "Product";
 
   const name = document.createElement("h2");
   name.className = "product-name";
@@ -131,7 +146,7 @@ function createProductCard(product) {
   const description = document.createElement("p");
   description.className = "product-description";
   description.textContent =
-    product.description || "Discover this product in our collection.";
+    product.short_description || product.description || "Discover this product in our collection.";
 
   body.appendChild(category);
   body.appendChild(name);
@@ -178,6 +193,7 @@ function createProductCard(product) {
   bottom.className = "product-card-bottom";
 
   const pricing = document.createElement("div");
+  pricing.className = "product-pricing";
 
   const price = document.createElement("p");
   price.className = "product-price";
@@ -189,8 +205,29 @@ function createProductCard(product) {
     ? `${stock} available`
     : "Currently unavailable";
 
-  pricing.appendChild(price);
-  pricing.appendChild(stockText);
+  if (hasDiscount) {
+    const regularPrice = document.createElement("span");
+    regularPrice.className = "product-regular-price";
+    regularPrice.textContent = formatPrice(product.regular_price);
+
+    const discount = Math.round(
+      ((Number(product.regular_price) - Number(product.price)) /
+        Number(product.regular_price)) *
+        100
+    );
+
+    const discountBadge = document.createElement("span");
+    discountBadge.className = "product-sale-badge";
+    discountBadge.textContent = `-${discount}%`;
+
+    pricing.appendChild(regularPrice);
+    pricing.appendChild(price);
+    imageLink.appendChild(discountBadge);
+  } else {
+    pricing.appendChild(price);
+  }
+
+  // pricing.appendChild(stockText);
 
   const actions = document.createElement("div");
   actions.className = "product-actions";
