@@ -40,6 +40,16 @@ export async function getProducts() {
   return data;
 }
 
+export async function getFeaturedProducts() {
+  const { response, data } = await request("/products?featured=true");
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`);
+  }
+
+  return data;
+}
+
 export async function getProductById(id) {
   const { response, data } = await request(`/products/${id}`);
 
