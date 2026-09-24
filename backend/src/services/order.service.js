@@ -3,8 +3,7 @@
 // All values are re-read from PostgreSQL and calculated server-side.
 
 const pool = require("../config/database");
-
-const PRODUCT_COLUMNS = ["id", "name", "price", "stock_quantity"];
+const { ORDER_COLUMNS: PRODUCT_COLUMNS } = require("./product.service");
 
 // Normalize and validate the incoming items array.
 // Merges duplicate product IDs into a single entry.
