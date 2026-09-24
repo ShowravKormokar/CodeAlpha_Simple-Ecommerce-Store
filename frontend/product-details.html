@@ -65,21 +65,39 @@
           <article class="product-details" id="product-details" style="display: none;"> <!-- Product image -->
             <div class="product-gallery">
               <div class="product-image-frame"> <span class="detail-stock-badge" id="detail-stock-badge"> In stock
-                </span> <img id="detail-image" src="" alt="" decoding="async" />
+                </span> <span class="detail-sale-badge" id="detail-sale-badge" style="display: none;"> Sale </span>
+                <img id="detail-image" src="" alt="" decoding="async" />
                 <div class="product-image-fallback" id="product-image-fallback" aria-hidden="true"> <i
                     class="ri-image-line"></i> <span>No image available</span> </div>
               </div>
               <div class="gallery-caption"> <i class="ri-shield-check-line" aria-hidden="true"></i> Product information
                 is provided directly by the store. </div>
             </div> <!-- Product information -->
-            <div class="product-details-info"> <span class="detail-category">PRODUCT</span>
+            <div class="product-details-info"> <span class="detail-category" id="detail-category">PRODUCT</span>
+              <span class="detail-brand" id="detail-brand" style="display: none;"></span>
               <h1 id="detail-name"></h1> <!-- Rating -->
               <div id="product-rating" class="product-rating" style="display: none;" aria-label="Product rating"></div>
               <div class="detail-price-row">
-                <p id="detail-price" class="detail-price"></p>
+                <div class="detail-price-container" id="detail-price-container">
+                  <p id="detail-price" class="detail-price"></p>
+                </div>
               </div>
               <div class="detail-divider"></div>
-              <p id="detail-description" class="detail-description"></p> <!-- Availability -->
+              <p id="detail-description" class="detail-description"></p> <!-- Product options -->
+              <div class="product-options" id="product-options" style="display: none;">
+                <div class="option-group variant-group" id="detail-variant-group" style="display: none;">
+                  <span class="option-label">Variant</span>
+                  <span class="option-value" id="detail-variant"></span>
+                </div>
+                <div class="option-group color-group" id="detail-color-group" style="display: none;">
+                  <span class="option-label">Color</span>
+                  <div class="color-options" id="color-options"></div>
+                </div>
+                <div class="option-group size-group" id="detail-size-group" style="display: none;">
+                  <span class="option-label">Size</span>
+                  <div class="size-options" id="size-options"></div>
+                </div>
+              </div> <!-- Availability -->
               <div class="availability-box">
                 <div class="availability-icon"> <i class="ri-checkbox-circle-line" aria-hidden="true"></i> </div>
                 <div> <span class="availability-label">Availability</span>
@@ -99,6 +117,14 @@
                   <button class="btn btn-primary add-to-cart-btn" id="add-to-cart" type="button"> <i
                       class="ri-shopping-bag-line" aria-hidden="true"></i> <span>Add to Cart</span> </button>
                 </div>
+              </div> <!-- Specifications -->
+              <div class="specifications-section" id="specifications-section" style="display: none;">
+                <h3 class="specifications-title">Specifications</h3>
+                <div class="specifications-content" id="specifications-content"></div>
+              </div> <!-- Product attributes -->
+              <div class="product-attributes" id="product-attributes" style="display: none;">
+                <h3 class="attributes-title">Product Information</h3>
+                <div class="attributes-grid" id="attributes-grid"></div>
               </div> <!-- Purchase reassurance -->
               <div class="purchase-benefits">
                 <div> <i class="ri-secure-payment-line" aria-hidden="true"></i> <span>Secure account</span> </div>
