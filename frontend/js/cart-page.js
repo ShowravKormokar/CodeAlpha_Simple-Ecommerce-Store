@@ -190,14 +190,63 @@ function renderItems(items, productsById) {
       product.name;
 
 
+    const isSale =
+      Boolean(product.offer_sale) &&
+      product.offer_price != null;
+
+    const hasDiscount =
+      isSale &&
+      product.regular_price != null &&
+      Number(product.regular_price) > 0 &&
+      Number(product.regular_price) >
+        Number(product.price);
+
     const price =
       document.createElement("p");
 
     price.className =
       "cart-item-price";
 
-    price.textContent =
-      formatPrice(product.price);
+    if (hasDiscount) {
+      const priceWrapper =
+        document.createElement("span");
+
+      priceWrapper.className =
+        "cart-item-price-wrapper";
+
+      const currentPrice =
+        document.createElement("span");
+
+      currentPrice.className =
+        "cart-item-current-price";
+
+      currentPrice.textContent =
+        formatPrice(product.price);
+
+      const regularPrice =
+        document.createElement("span");
+
+      regularPrice.className =
+        "cart-item-regular-price";
+
+      regularPrice.textContent =
+        formatPrice(product.regular_price);
+
+      priceWrapper.appendChild(
+        currentPrice
+      );
+
+      priceWrapper.appendChild(
+        regularPrice
+      );
+
+      price.appendChild(
+        priceWrapper
+      );
+    } else {
+      price.textContent =
+        formatPrice(product.price);
+    }
 
 
     const stockEl =
