@@ -2,7 +2,8 @@ const productService = require("../services/product.service");
 
 const getProducts = async (req, res, next) => {
   try {
-    const products = await productService.getProducts();
+    const featuredOnly = req.query.featured === "true";
+    const products = await productService.getProducts({ featuredOnly });
     res.status(200).json({
       success: true,
       data: products,
