@@ -332,6 +332,77 @@
               </div>
 
 
+              <fieldset class="payment-section">
+                <legend class="payment-legend">
+                  <span class="section-heading-icon payment-heading-icon">
+                    <i class="ri-wallet-3-line" aria-hidden="true"></i>
+                  </span>
+                  <span>
+                    <span class="payment-eyebrow">Payment</span>
+                    <strong>Choose how to pay</strong>
+                  </span>
+                </legend>
+
+                <p class="payment-intro">
+                  Card and mobile banking options are simulated for this demo. No real payment is processed.
+                </p>
+
+                <div class="payment-options" role="radiogroup" aria-label="Payment method">
+                  <label class="payment-option" for="payment-cash">
+                    <input type="radio" id="payment-cash" name="paymentMethod" value="CASH_ON_DELIVERY" checked />
+                    <span class="payment-option-content">
+                      <i class="ri-money-dollar-circle-line" aria-hidden="true"></i>
+                      <span>
+                        <strong>Cash on Delivery</strong>
+                        <small>Pay when your order arrives.</small>
+                      </span>
+                    </span>
+                  </label>
+
+                  <label class="payment-option" for="payment-card">
+                    <input type="radio" id="payment-card" name="paymentMethod" value="CARD" />
+                    <span class="payment-option-content">
+                      <i class="ri-bank-card-line" aria-hidden="true"></i>
+                      <span>
+                        <strong>Card</strong>
+                        <small>Simulated Visa or Mastercard payment.</small>
+                      </span>
+                    </span>
+                  </label>
+
+                  <label class="payment-option" for="payment-mobile">
+                    <input type="radio" id="payment-mobile" name="paymentMethod" value="MOBILE_BANKING" />
+                    <span class="payment-option-content">
+                      <i class="ri-smartphone-line" aria-hidden="true"></i>
+                      <span>
+                        <strong>Mobile Banking</strong>
+                        <small>Simulated bKash or Nagad payment.</small>
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div id="card-provider-options" class="provider-options" hidden>
+                  <span>Card provider</span>
+                  <div class="provider-choices">
+                    <label for="card-provider-visa"><input type="radio" id="card-provider-visa" name="cardProvider" value="VISA" checked /> Visa</label>
+                    <label for="card-provider-mastercard"><input type="radio" id="card-provider-mastercard" name="cardProvider" value="MASTERCARD" /> Mastercard</label>
+                  </div>
+                </div>
+
+                <div id="mobile-provider-options" class="provider-options" hidden>
+                  <span>Mobile provider</span>
+                  <div class="provider-choices">
+                    <label for="mobile-provider-bkash"><input type="radio" id="mobile-provider-bkash" name="mobileProvider" value="BKASH" /> bKash</label>
+                    <label for="mobile-provider-nagad"><input type="radio" id="mobile-provider-nagad" name="mobileProvider" value="NAGAD" /> Nagad</label>
+                  </div>
+                </div>
+
+                <p id="payment-status" class="payment-status" aria-live="polite">Pay when your order arrives.</p>
+              </fieldset>
+
+              <div id="checkout-inline-error" class="checkout-inline-error" role="alert" aria-live="assertive" hidden></div>
+
               <div class="form-actions">
 
                 <a class="btn btn-secondary" href="cart.html">
@@ -382,26 +453,18 @@
             <div class="order-summary-totals">
 
               <div class="summary-row">
-                <span>Subtotal</span>
+                <span>Estimated subtotal</span>
                 <strong id="summary-subtotal">$0.00</strong>
-              </div>
-
-              <div class="summary-row">
-                <span>Shipping</span>
-                <strong id="summary-shipping">$0.00</strong>
-              </div>
-
-              <div class="summary-row">
-                <span>Tax</span>
-                <strong id="summary-tax">$0.00</strong>
               </div>
 
               <div class="summary-divider"></div>
 
               <div class="summary-row summary-total">
-                <span>Total</span>
+                <span>Estimated total</span>
                 <strong id="summary-total">$0.00</strong>
               </div>
+
+              <p id="summary-note" class="summary-note">The store confirms the final total when your order is placed.</p>
 
             </div>
 
@@ -412,7 +475,7 @@
                 <i class="ri-shield-check-line" aria-hidden="true"></i>
 
                 <span>
-                  Your order is processed securely.
+                  No real payment is processed in this demo.
                 </span>
               </div>
 
@@ -420,7 +483,7 @@
                 <i class="ri-truck-line" aria-hidden="true"></i>
 
                 <span>
-                  Free shipping included.
+                  The store confirms your final total.
                 </span>
               </div>
 
@@ -435,6 +498,65 @@
     </section>
 
   </main>
+
+  <div id="payment-dialog" class="payment-dialog" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title" aria-describedby="payment-dialog-description" aria-hidden="true" hidden>
+    <div class="payment-dialog-panel">
+      <button type="button" id="payment-dialog-close" class="dialog-close" aria-label="Close payment dialog">
+        <i class="ri-close-line" aria-hidden="true"></i>
+      </button>
+      <h2 id="payment-dialog-title">Simulated payment</h2>
+      <p id="payment-dialog-description" class="dialog-description"></p>
+
+      <form id="card-payment-form" class="payment-dialog-form" novalidate>
+        <div class="form-group">
+          <label for="card-name">Cardholder name</label>
+          <input type="text" id="card-name" name="cardName" autocomplete="cc-name" />
+          <span class="error-text" id="card-payment-form-cardName-error"></span>
+        </div>
+        <div class="form-group">
+          <label for="card-number">Card number</label>
+          <input type="text" id="card-number" name="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="4242 4242 4242 4242" />
+          <span class="error-text" id="card-payment-form-cardNumber-error"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="card-expiry">Expiry</label>
+            <input type="text" id="card-expiry" name="cardExpiry" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/YY" />
+            <span class="error-text" id="card-payment-form-cardExpiry-error"></span>
+          </div>
+          <div class="form-group">
+            <label for="card-cvv">Security code</label>
+            <input type="password" id="card-cvv" name="cardCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="123" />
+            <span class="error-text" id="card-payment-form-cardCvv-error"></span>
+          </div>
+        </div>
+        <fieldset class="dialog-provider-fieldset">
+          <legend>Card provider</legend>
+          <label><input type="radio" name="cardProvider" value="VISA" checked /> Visa</label>
+          <label><input type="radio" name="cardProvider" value="MASTERCARD" /> Mastercard</label>
+        </fieldset>
+        <button type="submit" class="btn btn-primary">Confirm Card Selection</button>
+      </form>
+
+      <form id="mobile-payment-form" class="payment-dialog-form" novalidate hidden>
+        <fieldset class="dialog-provider-fieldset">
+          <legend>Mobile provider</legend>
+          <label><input type="radio" name="mobileProvider" value="BKASH" checked /> bKash</label>
+          <label><input type="radio" name="mobileProvider" value="NAGAD" /> Nagad</label>
+        </fieldset>
+        <div class="form-group">
+          <label for="mobile-number">Mobile number</label>
+          <input type="tel" id="mobile-number" name="mobileNumber" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" />
+          <span class="error-text" id="mobile-payment-form-mobileNumber-error"></span>
+        </div>
+        <div class="form-group">
+          <label for="mobile-reference">Transaction reference (optional)</label>
+          <input type="text" id="mobile-reference" name="mobileReference" maxlength="80" />
+        </div>
+        <button type="submit" class="btn btn-primary">Confirm Mobile Selection</button>
+      </form>
+    </div>
+  </div>
 
 
   <!-- FOOTER -->

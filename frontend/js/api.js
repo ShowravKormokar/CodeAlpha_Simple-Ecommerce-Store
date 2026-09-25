@@ -112,10 +112,10 @@ export async function getCurrentUser() {
   return { authenticated: true, data: data.data };
 }
 
-export async function createOrder(items, shipping = {}) {
+export async function createOrder(items, shipping = {}, payment = {}) {
   const { response, data } = await request("/orders", {
     method: "POST",
-    body: JSON.stringify({ items, shipping }),
+    body: JSON.stringify({ items, shipping, payment }),
   });
 
   return { status: response.status, data };
