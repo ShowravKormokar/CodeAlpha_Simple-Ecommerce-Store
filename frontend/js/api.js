@@ -30,24 +30,32 @@ async function request(path, options = {}) {
   return { response, data };
 }
 
-export async function getProducts() {
-  const { response, data } = await request("/products");
+export async function getProducts(params = {}, options = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") return;
+    query.set(key, String(value));
+  });
+
+  const queryString = query.toString();
+  const path = queryString ? `/products?${queryString}` : "/products";
+  const { response, data } = await request(path, options);
 
   if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
+    const error = new Error(
+      data?.message || `Unable to load products (${response.status})`
+    );
+    error.status = response.status;
+    error.responseData = data;
+    throw error;
   }
 
   return data;
 }
 
 export async function getFeaturedProducts() {
-  const { response, data } = await request("/products?featured=true");
-
-  if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
-  }
-
-  return data;
+  return getProducts({ featured: "true" });
 }
 
 export async function getProductById(id) {
