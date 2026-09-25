@@ -43,7 +43,7 @@ describe("Product API", () => {
       expect(mouse).toBeDefined();
       expect(mouse.id).toBe(1);
       expect(mouse.description).toBe("A simple wireless mouse for everyday use.");
-      expect(mouse.image_url).toBe("https://example.com/images/wireless-mouse.jpg");
+      expect(mouse.image_url).toBe("https://static.vecteezy.com/system/resources/previews/052/869/991/non_2x/sleek-black-wireless-mouse-with-a-blue-led-light-on-transparent-background-png.png");
       expect(mouse.stock_quantity).toBe(25);
     });
 
