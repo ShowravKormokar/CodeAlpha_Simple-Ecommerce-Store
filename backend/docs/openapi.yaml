@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: Simple E-commerce Store API
+  version: 1.0.0
+paths:
+  /api/products:
+    get:
+      summary: Discover active products
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Category'
+        - $ref: '#/components/parameters/Brand'
+        - $ref: '#/components/parameters/Subcategory'
+        - $ref: '#/components/parameters/Featured'
+        - $ref: '#/components/parameters/Sale'
+        - $ref: '#/components/parameters/MinPrice'
+        - $ref: '#/components/parameters/MaxPrice'
+        - $ref: '#/components/parameters/InStock'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Matching active products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    Q:
+      name: q
+      in: query
+      schema: { type: string, maxLength: 200 }
+      description: Whitespace-separated terms; every term must match a meaningful product field.
+    Category:
+      name: category
+      in: query
+      schema: { type: string, maxLength: 255 }
+    Brand:
+      name: brand
+      in: query
+      schema: { type: string, maxLength: 255 }
+    Subcategory:
+      name: subcategory
+      in: query
+      schema: { type: string, maxLength: 255 }
+    Featured:
+      name: featured
+      in: query
+      schema: { type: boolean }
+    Sale:
+      name: sale
+      in: query
+      schema: { type: boolean }
+    MinPrice:
+      name: min_price
+      in: query
+      schema: { type: number, format: double, minimum: 0 }
+    MaxPrice:
+      name: max_price
+      in: query
+      schema: { type: number, format: double, minimum: 0 }
+    InStock:
+      name: in_stock
+      in: query
+      schema: { type: boolean }
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [id_asc, newest, oldest, price_asc, price_desc, name_asc, name_desc, featured]
+        default: id_asc
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque cursor returned as pagination.nextCursor; reuse only with the same filters and sort.
+  responses:
+    BadRequest:
+      description: Invalid query parameter or cursor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ProductListResponse:
+      type: object
+      required: [success, data, pagination]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    Product:
+      type: object
+      required: [id, name, price, stock_quantity, is_active, is_featured, offer_sale]
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        name: { type: string, example: Wireless Mouse }
+        slug: { type: string, nullable: true }
+        sku: { type: string, nullable: true }
+        brand: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        subcategory: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        short_description: { type: string, nullable: true }
+        price: { type: number, format: double, example: 25.99 }
+        regular_price: { type: number, format: double, nullable: true }
+        offer_price: { type: number, format: double, nullable: true }
+        offer_sale: { type: boolean }
+        image_url: { type: string, nullable: true }
+        stock_quantity: { type: integer, minimum: 0 }
+        low_stock_threshold: { type: integer, minimum: 0 }
+        is_active: { type: boolean }
+        is_featured: { type: boolean }
+        colors: { type: array, items: { type: string } }
+        sizes: { type: array, items: { type: string } }
+        variant: { type: string, nullable: true }
+        specifications: { type: object, additionalProperties: true }
+        vendor: { type: string, nullable: true }
+        made_in: { type: string, nullable: true }
+        barcode: { type: string, nullable: true }
+        weight: { type: number, format: double, nullable: true }
+        unit: { type: string, nullable: true }
+        material: { type: string, nullable: true }
+        warranty: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        rating:
+          type: object
+          required: [average, count]
+          properties:
+            average: { type: number, example: 4.5 }
+            count: { type: integer, example: 2 }
+    Pagination:
+      type: object
+      required: [limit, hasNextPage, nextCursor]
+      properties:
+        limit: { type: integer, example: 20 }
+        hasNextPage: { type: boolean, example: true }
+        nextCursor: { type: string, nullable: true }
+    ErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: Invalid query parameter }
