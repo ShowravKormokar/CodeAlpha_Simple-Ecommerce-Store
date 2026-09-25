@@ -452,4 +452,5 @@ module.exports = {
   normalizeTextArray,
   normalizeJsonb,
   ORDER_COLUMNS,
+  PRODUCT_COLUMNS,
 };
