@@ -7,6 +7,7 @@ const router = express.Router();
 
 // All order routes require authentication.
 router.post("/", authMiddleware, orderController.createOrder);
+router.post("/:id/cancel", authMiddleware, orderController.cancelOrder);
 router.get("/", authMiddleware, orderController.getOrders);
 router.get("/:id", authMiddleware, orderController.getOrderById);
 

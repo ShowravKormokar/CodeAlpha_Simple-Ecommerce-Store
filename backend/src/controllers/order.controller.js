@@ -5,7 +5,7 @@ const orderService = require("../services/order.service");
 async function createOrder(req, res, next) {
   try {
     const userId = req.userId;
-    const { items, shipping } = req.body || {};
+    const { items, shipping, payment } = req.body || {};
 
     if (!items) {
       return res.status(400).json({
@@ -14,7 +14,7 @@ async function createOrder(req, res, next) {
       });
     }
 
-    const result = await orderService.createOrder(userId, items, shipping);
+    const result = await orderService.createOrder(userId, items, shipping, payment);
 
     res.status(201).json({
       success: true,
@@ -28,6 +28,35 @@ async function createOrder(req, res, next) {
           unitPrice: item.unitPrice,
           subtotal: item.subtotal,
         })),
+      },
+    });
+  } catch (error) {
+    if (error.status === 400 || error.status === 404 || error.status === 409) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+}
+
+async function cancelOrder(req, res, next) {
+  try {
+    const result = await orderService.cancelOrder(
+      req.params.id,
+      req.userId,
+      req.body?.reason
+    );
+
+    res.status(200).json({
+      success: true,
+      message: result.alreadyCancelled
+        ? "Order was already cancelled"
+        : "Order cancelled successfully",
+      data: {
+        order: result.order,
+        already_cancelled: result.alreadyCancelled,
       },
     });
   } catch (error) {
@@ -87,4 +116,4 @@ async function getOrderById(req, res, next) {
   }
 }
 
-module.exports = { createOrder, getOrders, getOrderById };
+module.exports = { createOrder, cancelOrder, getOrders, getOrderById };

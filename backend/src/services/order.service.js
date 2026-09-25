@@ -4,6 +4,23 @@
 
 const pool = require("../config/database");
 const { ORDER_COLUMNS: PRODUCT_COLUMNS } = require("./product.service");
+const {
+  calculateDeliveryWindow,
+  isCancellableStatus,
+  normalizePayment,
+} = require("./order-lifecycle.service");
+
+function normalizeDateOnly(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value.slice(0, 10);
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
 
 // Normalize and validate the incoming items array.
 // Merges duplicate product IDs into a single entry.
@@ -48,6 +65,7 @@ async function findProductsByIds(productIds, client) {
     `SELECT ${PRODUCT_COLUMNS.join(", ")}
      FROM products
      WHERE id = ANY($1)
+     ORDER BY id ASC
      FOR UPDATE`,
     [productIds]
   );
@@ -55,11 +73,44 @@ async function findProductsByIds(productIds, client) {
 }
 
 // Create the order header inside the transaction.
-async function insertOrder(userId, totalAmount, status, shippingInfo, client) {
+async function insertOrder(
+  userId,
+  totalAmount,
+  status,
+  shippingInfo,
+  payment,
+  deliveryWindow,
+  placedAt,
+  client
+) {
   const result = await client.query(
-    `INSERT INTO orders (user_id, total_amount, status, shipping_name, shipping_email, shipping_phone, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_postal_code, shipping_country)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-     RETURNING id, user_id, total_amount, status, created_at, updated_at, shipping_name, shipping_email, shipping_phone, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_postal_code, shipping_country`,
+    `INSERT INTO orders (
+        user_id,
+        total_amount,
+        status,
+        shipping_name,
+        shipping_email,
+        shipping_phone,
+        shipping_address_line1,
+        shipping_address_line2,
+        shipping_city,
+        shipping_state,
+        shipping_postal_code,
+        shipping_country,
+        created_at,
+        updated_at,
+        estimated_delivery_from,
+        estimated_delivery_to,
+        payment_method,
+        payment_status,
+        payment_provider
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, $18)
+     RETURNING id, user_id, total_amount, status, created_at, updated_at,
+       shipping_name, shipping_email, shipping_phone, shipping_address_line1,
+       shipping_address_line2, shipping_city, shipping_state, shipping_postal_code,
+       shipping_country, estimated_delivery_from, estimated_delivery_to,
+       payment_method, payment_status, payment_provider`,
     [
       userId,
       totalAmount,
@@ -73,6 +124,12 @@ async function insertOrder(userId, totalAmount, status, shippingInfo, client) {
       shippingInfo.state || null,
       shippingInfo.postalCode || null,
       shippingInfo.country || null,
+      placedAt,
+      deliveryWindow.from,
+      deliveryWindow.to,
+      payment.method,
+      payment.status,
+      payment.provider,
     ]
   );
   return result.rows[0];
@@ -108,9 +165,159 @@ async function decreaseStock(productId, quantity, client) {
   return result.rows[0];
 }
 
-// Main order creation flow.
-// Runs entirely inside a single PostgreSQL transaction.
-async function createOrder(userId, rawItems, shippingInfo = {}) {
+function normalizeCancellationReason(reason) {
+  if (reason === undefined || reason === null) return null;
+
+  if (typeof reason !== "string") {
+    const error = new Error("Cancellation reason must be a string");
+    error.status = 400;
+    throw error;
+  }
+
+  const normalized = reason.trim();
+  if (normalized.length > 500) {
+    const error = new Error("Cancellation reason must be 500 characters or fewer");
+    error.status = 400;
+    throw error;
+  }
+
+  return normalized || null;
+}
+
+async function findLockedOrderForCancellation(orderId, userId, client) {
+  const result = await client.query(
+    `SELECT id, user_id, status
+     FROM orders
+     WHERE id = $1 AND user_id = $2
+     FOR UPDATE`,
+    [orderId, userId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function findLockedOrderItems(orderId, client) {
+  const result = await client.query(
+    `SELECT product_id, quantity
+     FROM order_items
+     WHERE order_id = $1
+     ORDER BY product_id ASC
+     FOR UPDATE`,
+    [orderId]
+  );
+
+  return result.rows;
+}
+
+async function lockProductsForCancellation(productIds, client) {
+  if (productIds.length === 0) return;
+
+  const result = await client.query(
+    `SELECT id
+     FROM products
+     WHERE id = ANY($1)
+     ORDER BY id ASC
+     FOR UPDATE`,
+    [productIds]
+  );
+
+  if (result.rows.length !== productIds.length) {
+    throw new Error("Order references a product that no longer exists");
+  }
+}
+
+async function restoreStock(productId, quantity, client) {
+  await client.query(
+    `UPDATE products
+     SET stock_quantity = stock_quantity + $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [quantity, productId]
+  );
+}
+
+async function cancelOrder(orderId, userId, rawReason) {
+  const orderIdNumber = Number(orderId);
+  if (!Number.isInteger(orderIdNumber) || orderIdNumber <= 0) {
+    const error = new Error("Invalid order ID");
+    error.status = 400;
+    throw error;
+  }
+
+  const reason = normalizeCancellationReason(rawReason);
+  const client = await pool.connect();
+  let committed = false;
+
+  try {
+    await client.query("BEGIN");
+
+    const order = await findLockedOrderForCancellation(
+      orderIdNumber,
+      userId,
+      client
+    );
+
+    if (!order) {
+      const error = new Error("Order not found");
+      error.status = 404;
+      throw error;
+    }
+
+    if (order.status === "cancelled") {
+      await client.query("COMMIT");
+      committed = true;
+      return {
+        order: await getOrderByIdAndUser(orderIdNumber, userId),
+        alreadyCancelled: true,
+      };
+    }
+
+    if (!isCancellableStatus(order.status)) {
+      const error = new Error("Order cannot be cancelled in its current status");
+      error.status = 409;
+      throw error;
+    }
+
+    const items = await findLockedOrderItems(orderIdNumber, client);
+    const productIds = [...new Set(items.map((item) => Number(item.product_id)))];
+    await lockProductsForCancellation(productIds, client);
+
+    for (const item of items) {
+      await restoreStock(Number(item.product_id), Number(item.quantity), client);
+    }
+
+    await client.query(
+      `UPDATE orders
+       SET status = 'cancelled',
+           cancelled_at = CURRENT_TIMESTAMP,
+           cancelled_by_user_id = $2,
+           cancellation_reason = $3,
+           payment_status = CASE
+             WHEN payment_status = 'PENDING' THEN 'CANCELLED'
+             ELSE payment_status
+           END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [orderIdNumber, userId, reason]
+    );
+
+    await client.query("COMMIT");
+    committed = true;
+
+    return {
+      order: await getOrderByIdAndUser(orderIdNumber, userId),
+      alreadyCancelled: false,
+    };
+  } catch (error) {
+    if (!committed) {
+      await client.query("ROLLBACK").catch(() => {});
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function createOrder(userId, rawItems, shippingInfo = {}, paymentInfo = {}) {
   const normalized = normalizeItems(rawItems);
 
   if (normalized.error) {
@@ -119,19 +326,22 @@ async function createOrder(userId, rawItems, shippingInfo = {}) {
     throw err;
   }
 
+  const shipping = shippingInfo && typeof shippingInfo === "object" && !Array.isArray(shippingInfo)
+    ? shippingInfo
+    : {};
+  const payment = normalizePayment(paymentInfo);
   const items = normalized.items;
   const productIds = items.map((item) => item.productId);
-
+  const placedAt = new Date();
+  const deliveryWindow = calculateDeliveryWindow(placedAt);
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Lock and read current product data.
     const products = await findProductsByIds(productIds, client);
     const productMap = new Map(products.map((p) => [Number(p.id), p]));
 
-    // Validate existence.
     for (const item of items) {
       if (!productMap.has(item.productId)) {
         const err = new Error(`Product not found: ID ${item.productId}`);
@@ -140,19 +350,15 @@ async function createOrder(userId, rawItems, shippingInfo = {}) {
       }
     }
 
-    // Validate stock.
     for (const item of items) {
       const product = productMap.get(item.productId);
       if (item.quantity > Number(product.stock_quantity)) {
-        const err = new Error(
-          `Insufficient stock for ${product.name}`
-        );
+        const err = new Error(`Insufficient stock for ${product.name}`);
         err.status = 409;
         throw err;
       }
     }
 
-    // Authoritative price calculation.
     let totalAmount = 0;
     const orderItems = [];
 
@@ -170,33 +376,32 @@ async function createOrder(userId, rawItems, shippingInfo = {}) {
       });
     }
 
-    // Round to 2 decimal places to match NUMERIC(10,2).
     totalAmount = Math.round(totalAmount * 100) / 100;
 
-    // Create order header with shipping info.
     const order = await insertOrder(
       userId,
       totalAmount,
       "confirmed",
-      shippingInfo,
+      shipping,
+      payment,
+      deliveryWindow,
+      placedAt,
       client
     );
 
-    // Create order items.
     const createdItems = [];
-    for (const oi of orderItems) {
+    for (const orderItem of orderItems) {
       const created = await createOrderItem(
         order.id,
-        oi.productId,
-        oi.quantity,
-        oi.unitPrice,
-        oi.subtotal,
+        orderItem.productId,
+        orderItem.quantity,
+        orderItem.unitPrice,
+        orderItem.subtotal,
         client
       );
       createdItems.push(created);
     }
 
-    // Decrease stock.
     for (const item of items) {
       await decreaseStock(item.productId, item.quantity, client);
     }
@@ -211,6 +416,13 @@ async function createOrder(userId, rawItems, shippingInfo = {}) {
         status: order.status,
         createdAt: order.created_at,
         updatedAt: order.updated_at,
+        estimatedDeliveryFrom: normalizeDateOnly(order.estimated_delivery_from),
+        estimatedDeliveryTo: normalizeDateOnly(order.estimated_delivery_to),
+        paymentMethod: order.payment_method,
+        paymentStatus: order.payment_status,
+        paymentProvider: order.payment_provider,
+        cancelledAt: null,
+        cancellationReason: null,
         shippingName: order.shipping_name,
         shippingEmail: order.shipping_email,
         shippingPhone: order.shipping_phone,
@@ -231,7 +443,13 @@ async function createOrder(userId, rawItems, shippingInfo = {}) {
   }
 }
 
-module.exports = { createOrder, normalizeItems, getOrdersByUser, getOrderByIdAndUser };
+module.exports = {
+  createOrder,
+  cancelOrder,
+  normalizeItems,
+  getOrdersByUser,
+  getOrderByIdAndUser,
+};
 
 // Return the authenticated user's order history, newest first.
 async function getOrdersByUser(userId) {
@@ -240,9 +458,17 @@ async function getOrdersByUser(userId) {
         id,
         total_amount,
         status,
-        created_at,
-        updated_at,
-        shipping_name,
+     created_at,
+     updated_at,
+     estimated_delivery_from,
+     estimated_delivery_to,
+     cancelled_at,
+     cancelled_by_user_id,
+     cancellation_reason,
+     payment_method,
+     payment_status,
+     payment_provider,
+     shipping_name,
         shipping_email,
         shipping_phone,
         shipping_address_line1,
@@ -263,6 +489,14 @@ async function getOrdersByUser(userId) {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    estimatedDeliveryFrom: normalizeDateOnly(row.estimated_delivery_from),
+    estimatedDeliveryTo: normalizeDateOnly(row.estimated_delivery_to),
+    cancelledAt: row.cancelled_at,
+    cancelledByUserId: row.cancelled_by_user_id,
+    cancellationReason: row.cancellation_reason,
+    paymentMethod: row.payment_method,
+    paymentStatus: row.payment_status,
+    paymentProvider: row.payment_provider,
     shippingName: row.shipping_name,
     shippingEmail: row.shipping_email,
     shippingPhone: row.shipping_phone,
@@ -284,9 +518,17 @@ async function getOrderByIdAndUser(orderId, userId) {
         user_id,
         total_amount,
         status,
-        created_at,
-        updated_at,
-        shipping_name,
+     created_at,
+     updated_at,
+     estimated_delivery_from,
+     estimated_delivery_to,
+     cancelled_at,
+     cancelled_by_user_id,
+     cancellation_reason,
+     payment_method,
+     payment_status,
+     payment_provider,
+     shipping_name,
         shipping_email,
         shipping_phone,
         shipping_address_line1,
@@ -332,6 +574,14 @@ async function getOrderByIdAndUser(orderId, userId) {
     status: order.status,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
+    estimatedDeliveryFrom: normalizeDateOnly(order.estimated_delivery_from),
+    estimatedDeliveryTo: normalizeDateOnly(order.estimated_delivery_to),
+    cancelledAt: order.cancelled_at,
+    cancelledByUserId: order.cancelled_by_user_id,
+    cancellationReason: order.cancellation_reason,
+    paymentMethod: order.payment_method,
+    paymentStatus: order.payment_status,
+    paymentProvider: order.payment_provider,
     shippingName: order.shipping_name,
     shippingEmail: order.shipping_email,
     shippingPhone: order.shipping_phone,
