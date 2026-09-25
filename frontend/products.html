@@ -31,41 +31,163 @@
   </header> <!-- ==================== MAIN ==================== -->
   <main>
     <section class="products-page">
-      <div class="container"> <!-- Page heading -->
+      <div class="container">
         <div class="products-page-header">
-          <div class="products-heading-content"> <span class="section-eyebrow">OUR COLLECTION</span>
+          <div class="products-heading-content">
+            <span class="section-eyebrow">OUR COLLECTION</span>
             <h1>Explore our products</h1>
-            <p> Discover carefully selected products and find something you'll love. </p>
+            <p>Discover carefully selected products and find something you'll love.</p>
           </div>
           <div class="products-header-meta">
-            <div class="product-count" id="product-count" aria-live="polite"> <i class="ri-shopping-bag-3-line"
-                aria-hidden="true"></i> <span>Loading products...</span> </div>
+            <div class="product-count" id="product-count" aria-live="polite">
+              <i class="ri-shopping-bag-3-line" aria-hidden="true"></i>
+              <span>Loading products...</span>
+            </div>
           </div>
-        </div> <!-- Product toolbar -->
-        <div class="products-toolbar">
-          <div class="toolbar-intro"> <span class="toolbar-dot"></span> <span>Available products</span> </div>
-          <div class="toolbar-actions"> <a class="toolbar-cart-link" href="cart.html"> <i class="ri-shopping-bag-line"
-                aria-hidden="true"></i> View cart </a> </div>
-        </div> <!-- ==================== PRODUCTS CONTAINER ==================== -->
-        <div id="products-container"> <!-- Loading -->
+        </div>
+
+        <section class="product-discovery" aria-labelledby="discovery-heading">
+          <h2 class="sr-only" id="discovery-heading">Product discovery</h2>
+          <form id="product-discovery-form" novalidate>
+            <div class="discovery-search-row">
+              <div class="discovery-search-field">
+                <label for="product-search">Search products</label>
+                <div class="search-input-wrap">
+                  <i class="ri-search-line" aria-hidden="true"></i>
+                  <input id="product-search" name="q" type="search" placeholder="Search by name, brand, or SKU..."
+                    autocomplete="off" maxlength="200" />
+                  <button id="clear-search-btn" class="search-clear-btn" type="button" aria-label="Clear search"
+                    hidden>
+                    <i class="ri-close-circle-fill" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <button id="filter-toggle-btn" class="btn btn-secondary filter-toggle" type="button"
+                aria-expanded="true" aria-controls="discovery-filters">
+                <i class="ri-filter-3-line" aria-hidden="true"></i>
+                <span>Filters</span>
+              </button>
+            </div>
+
+            <div id="discovery-filters" class="discovery-filters">
+              <div class="filter-group filter-group-wide">
+                <label for="category-filter">Category</label>
+                <select id="category-filter" name="category">
+                  <option value="">All categories</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Home &amp; Office">Home &amp; Office</option>
+                </select>
+              </div>
+              <div class="filter-group filter-group-wide">
+                <label for="brand-filter">Brand</label>
+                <select id="brand-filter" name="brand">
+                  <option value="">All brands</option>
+                  <option value="ASUS">ASUS</option>
+                  <option value="Anker">Anker</option>
+                  <option value="Corsair">Corsair</option>
+                  <option value="JBL">JBL</option>
+                  <option value="Logitech">Logitech</option>
+                  <option value="Philips">Philips</option>
+                  <option value="Rain Design">Rain Design</option>
+                  <option value="SanDisk">SanDisk</option>
+                  <option value="Sony">Sony</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="subcategory-filter">Subcategory</label>
+                <select id="subcategory-filter" name="subcategory">
+                  <option value="">All subcategories</option>
+                  <option value="Accessories">Accessories</option>
+                  <option value="Audio">Audio</option>
+                  <option value="Computer Accessories">Computer Accessories</option>
+                  <option value="Lighting">Lighting</option>
+                  <option value="Monitors">Monitors</option>
+                  <option value="Storage">Storage</option>
+                </select>
+              </div>
+              <fieldset class="filter-checks">
+                <legend>Availability</legend>
+                <label class="check-control">
+                  <input id="in-stock-filter" name="in_stock" type="checkbox" />
+                  <span>In stock</span>
+                </label>
+                <label class="check-control">
+                  <input id="sale-filter" name="sale" type="checkbox" />
+                  <span>On sale</span>
+                </label>
+                <label class="check-control">
+                  <input id="featured-filter" name="featured" type="checkbox" />
+                  <span>Featured</span>
+                </label>
+              </fieldset>
+              <fieldset class="filter-checks price-checks">
+                <legend>Price range</legend>
+                <div class="price-inputs">
+                  <label for="min-price-filter">Min</label>
+                  <input id="min-price-filter" name="min_price" type="number" min="0" step="0.01"
+                    inputmode="decimal" placeholder="0" />
+                  <span aria-hidden="true">–</span>
+                  <label for="max-price-filter">Max</label>
+                  <input id="max-price-filter" name="max_price" type="number" min="0" step="0.01"
+                    inputmode="decimal" placeholder="Any" />
+                </div>
+                <p class="filter-error" id="price-filter-error" role="alert" hidden></p>
+              </fieldset>
+              <div class="filter-group sort-group">
+                <label for="sort-filter">Sort by</label>
+                <select id="sort-filter" name="sort">
+                  <option value="id_asc">Featured order</option>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="price_asc">Price: low to high</option>
+                  <option value="price_desc">Price: high to low</option>
+                  <option value="name_asc">Name: A–Z</option>
+                  <option value="name_desc">Name: Z–A</option>
+                  <option value="featured">Featured first</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="discovery-actions">
+              <div id="active-filters" class="active-filters" aria-label="Active filters"></div>
+              <button id="clear-all-btn" class="btn btn-secondary" type="button" hidden>
+                <i class="ri-close-circle-line" aria-hidden="true"></i>
+                Clear all
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <div id="products-container">
           <div class="products-state loading" id="loading">
-            <div class="state-icon loading-icon"> <span class="spinner" aria-hidden="true"></span> </div>
+            <div class="state-icon loading-icon"><span class="spinner" aria-hidden="true"></span></div>
             <h2>Loading products</h2>
             <p>We're getting the latest products for you.</p>
-          </div> <!-- Empty -->
+          </div>
           <div class="products-state empty-state" id="empty-state" style="display: none;">
-            <div class="state-icon"> <i class="ri-shopping-bag-3-line" aria-hidden="true"></i> </div>
-            <h2>No products available</h2>
-            <p> There are no products available right now. Please check back later. </p> <a class="btn btn-primary"
-              href="index.html"> <i class="ri-home-5-line" aria-hidden="true"></i> Back Home </a>
-          </div> <!-- Error -->
+            <div class="state-icon"><i class="ri-search-line" aria-hidden="true"></i></div>
+            <h2>No products found</h2>
+            <p id="empty-state-message">We couldn't find products matching your search and filters.</p>
+            <button class="btn btn-primary" id="empty-clear-btn" type="button">
+              <i class="ri-refresh-line" aria-hidden="true"></i> Clear filters
+            </button>
+          </div>
           <div class="products-state error-state" id="error-state" style="display: none;">
-            <div class="state-icon error-icon"> <i class="ri-error-warning-line" aria-hidden="true"></i> </div>
+            <div class="state-icon error-icon"><i class="ri-error-warning-line" aria-hidden="true"></i></div>
             <h2>Unable to load products</h2>
-            <p> We couldn't connect to the store right now. Please try again. </p> <button class="btn btn-primary"
-              id="retry-btn" type="button"> <i class="ri-refresh-line" aria-hidden="true"></i> Try again </button>
-          </div> <!-- Products -->
+            <p id="error-state-message">We couldn't connect to the store right now. Please try again.</p>
+            <button class="btn btn-primary" id="retry-btn" type="button">
+              <i class="ri-refresh-line" aria-hidden="true"></i> Try again
+            </button>
+          </div>
           <div class="products-grid" id="products-grid" style="display: none;" aria-live="polite"></div>
+          <div id="load-more-container" class="load-more-container" style="display: none;">
+            <button class="btn btn-secondary" id="load-more-btn" type="button">
+              <span class="load-more-label">Load more products</span>
+              <i class="ri-arrow-down-line" aria-hidden="true"></i>
+            </button>
+            <p id="load-more-status" class="sr-only" role="status" aria-live="polite"></p>
+          </div>
         </div>
       </div>
     </section>
