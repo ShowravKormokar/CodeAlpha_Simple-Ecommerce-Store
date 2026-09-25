@@ -90,21 +90,35 @@ CREATE INDEX IF NOT EXISTS idx_products_active_category_brand_id
 -- orders
 -- ------------------------------------------------------------
 CREATE TABLE orders (
-    id            BIGSERIAL       PRIMARY KEY,
-    user_id       BIGINT          NOT NULL,
-    total_amount  NUMERIC(10,2)   NOT NULL CHECK (total_amount >= 0),
-    status        VARCHAR(50)     NOT NULL DEFAULT 'pending'
-                             CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
-    created_at    TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                       BIGSERIAL       PRIMARY KEY,
+    user_id                  BIGINT          NOT NULL,
+    total_amount             NUMERIC(10,2)   NOT NULL CHECK (total_amount >= 0),
+    status                   VARCHAR(50)     NOT NULL DEFAULT 'pending'
+                                     CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled')),
+    created_at               TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    estimated_delivery_from  DATE,
+    estimated_delivery_to    DATE,
+    cancelled_at             TIMESTAMPTZ,
+    cancelled_by_user_id     BIGINT,
+    cancellation_reason      VARCHAR(500),
+    payment_method           VARCHAR(32),
+    payment_status           VARCHAR(20)     NOT NULL DEFAULT 'PENDING'
+                                     CHECK (payment_status IN ('PENDING', 'AUTHORIZED', 'PAID', 'FAILED', 'CANCELLED')),
+    payment_provider         VARCHAR(32),
 
     CONSTRAINT fk_orders_user
         FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_orders_cancelled_by
+        FOREIGN KEY (cancelled_by_user_id) REFERENCES users(id)
         ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
--- Index to speed up lookups of a user's order history.
+-- Index to speed up lookups of a user's order history and lifecycle state.
 CREATE INDEX idx_orders_user_id ON orders (user_id);
+CREATE INDEX idx_orders_status ON orders (status);
+CREATE INDEX idx_orders_cancelled_at ON orders (cancelled_at);
 
 -- ------------------------------------------------------------
 -- order_items
