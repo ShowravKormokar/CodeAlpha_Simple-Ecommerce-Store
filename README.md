@@ -256,6 +256,26 @@ Unexpected server/database error (`500 Internal Server Error`):
 }
 ```
 
+### Product Discovery Querying
+
+`GET /api/products` remains the active product listing endpoint and now supports the PostgreSQL-backed discovery pipeline. Query parameters are `q`, `category`, `brand`, `subcategory`, `featured`, `sale`, `min_price`, `max_price`, `in_stock`, `sort`, `limit`, and `cursor`.
+
+Search terms are case-insensitive substring matches against product name, SKU, brand, category, subcategory, description, and short description. Terms are combined with AND semantics. Filters compose in one query. The default sort remains `id_asc`; supported sort values are `id_asc`, `newest`, `oldest`, `price_asc`, `price_desc`, `name_asc`, `name_desc`, and `featured`. `limit` defaults to 20 and is limited to 100.
+
+The response preserves the existing `success` and `data` fields and adds:
+
+```json
+{
+  "pagination": {
+    "limit": 20,
+    "hasNextPage": true,
+    "nextCursor": "opaque-cursor"
+  }
+}
+```
+
+The cursor is a signed, query-context-bound keyset cursor. Reuse it only with the same filters and sort. Empty matches return `200` with an empty `data` array. The full OpenAPI contract is in `backend/docs/openapi.yaml`, and the design handoff is in `backend/docs/product-search-phase-01.md`.
+
 ## Phase 04 — Product Frontend
 
 ### Products Page
