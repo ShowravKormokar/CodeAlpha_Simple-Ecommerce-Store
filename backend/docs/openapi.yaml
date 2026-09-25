@@ -30,8 +30,97 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/orders:
+    get:
+      summary: List the authenticated customer's orders
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Customer order history, including cancelled orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create an order
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/orders/{orderId}:
+    get:
+      summary: Get an owned order
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/orders/{orderId}/cancel:
+    post:
+      summary: Cancel an eligible owned order
+      description: Cancellation restores recorded order-item quantities and order metadata atomically. Repeated requests are idempotent.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: Cancelled order or an already-cancelled idempotent result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelOrderEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 components:
   parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
     Q:
       name: q
       in: query
@@ -92,6 +181,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Order not found or not owned by the authenticated customer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Order is not cancellable in its current status
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     InternalError:
       description: Internal server error
       content:
@@ -99,6 +206,131 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    CreateOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: integer, format: int64, minimum: 1 }
+              quantity: { type: integer, minimum: 1 }
+        shipping:
+          type: object
+          additionalProperties: true
+        payment:
+          $ref: '#/components/schemas/PaymentSelection'
+    PaymentSelection:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [CASH_ON_DELIVERY, CARD, MOBILE_BANKING]
+          default: CASH_ON_DELIVERY
+        provider:
+          type: string
+          nullable: true
+          enum: [VISA, MASTERCARD, BKASH, NAGAD, null]
+    CancelOrderRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+    OrderListEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: object
+          required: [orders]
+          properties:
+            orders:
+              type: array
+              items:
+                $ref: '#/components/schemas/Order'
+    OrderEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: object
+          required: [order]
+          properties:
+            order:
+              $ref: '#/components/schemas/Order'
+    CancelOrderEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data:
+          type: object
+          required: [order, already_cancelled]
+          properties:
+            order:
+              $ref: '#/components/schemas/Order'
+            already_cancelled: { type: boolean }
+    Order:
+      type: object
+      required: [id, userId, totalAmount, status, createdAt, paymentStatus]
+      properties:
+        id: { type: integer, format: int64 }
+        userId: { type: integer, format: int64 }
+        totalAmount: { type: number, format: double }
+        status:
+          type: string
+          enum: [pending, confirmed, processing, shipped, delivered, completed, cancelled]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        estimatedDeliveryFrom: { type: string, format: date, nullable: true }
+        estimatedDeliveryTo: { type: string, format: date, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        cancelledByUserId: { type: integer, format: int64, nullable: true }
+        cancellationReason: { type: string, nullable: true }
+        paymentMethod:
+          type: string
+          nullable: true
+          enum: [CASH_ON_DELIVERY, CARD, MOBILE_BANKING, null]
+        paymentStatus:
+          type: string
+          enum: [PENDING, AUTHORIZED, PAID, FAILED, CANCELLED]
+        paymentProvider:
+          type: string
+          nullable: true
+          enum: [VISA, MASTERCARD, BKASH, NAGAD, null]
+        shippingName: { type: string, nullable: true }
+        shippingEmail: { type: string, nullable: true }
+        shippingPhone: { type: string, nullable: true }
+        shippingAddressLine1: { type: string, nullable: true }
+        shippingAddressLine2: { type: string, nullable: true }
+        shippingCity: { type: string, nullable: true }
+        shippingState: { type: string, nullable: true }
+        shippingPostalCode: { type: string, nullable: true }
+        shippingCountry: { type: string, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    OrderItem:
+      type: object
+      required: [id, productId, quantity, unitPrice, subtotal]
+      properties:
+        id: { type: integer, format: int64 }
+        productId: { type: integer, format: int64 }
+        productName: { type: string, nullable: true }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number, format: double }
+        subtotal: { type: number, format: double }
+        rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        ratedAt: { type: string, format: date-time, nullable: true }
     ProductListResponse:
       type: object
       required: [success, data, pagination]
@@ -164,3 +396,8 @@ components:
       properties:
         success: { type: boolean, example: false }
         message: { type: string, example: Invalid query parameter }
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token

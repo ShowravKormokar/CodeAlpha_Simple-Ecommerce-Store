@@ -439,11 +439,15 @@ Authentication: **Required** (JWT via HttpOnly cookie).
   "items": [
     { "productId": 1, "quantity": 2 },
     { "productId": 5, "quantity": 1 }
-  ]
+  ],
+  "payment": {
+    "method": "CASH_ON_DELIVERY",
+    "provider": null
+  }
 }
 ```
 
-Only `productId` and `quantity` are sent. The browser never sends price, subtotal, or total.
+Only `productId` and `quantity` are sent for products. The browser never sends price, subtotal, or total. Payment selection is optional for backward compatibility and defaults to `CASH_ON_DELIVERY`; supported methods are `CASH_ON_DELIVERY`, `CARD`, and `MOBILE_BANKING` with validated safe providers. No card numbers, CVV, PINs, OTPs, or payment secrets are accepted or stored.
 
 ### Server-side authority
 
@@ -454,10 +458,11 @@ The backend re-reads every product from PostgreSQL and:
 3. Locks product rows with `FOR UPDATE`
 4. Calculates `subtotal = current_price × quantity`
 5. Calculates `total_amount = SUM(subtotals)`
-6. Creates the order
-7. Creates order items
-8. Decrements stock
-9. Commits the transaction
+6. Calculates and stores the 7–14 working-day delivery window
+7. Creates the order with validated payment metadata
+8. Creates order items
+9. Decrements stock
+10. Commits the transaction
 
 All of this runs inside **one PostgreSQL transaction**. If any step fails, everything rolls back.
 
@@ -465,11 +470,10 @@ All of this runs inside **one PostgreSQL transaction**. If any step fails, every
 
 ```sql
 BEGIN
-  → SELECT ... FROM products WHERE id = ANY($1) FOR UPDATE
-  → validate existence
-  → validate stock
-  → calculate totals
-  → INSERT INTO orders
+  → SELECT ... FROM products WHERE id = ANY($1) ORDER BY id ASC FOR UPDATE
+  → validate existence, stock, and payment selection
+  → calculate totals and 7–14 working-day delivery window
+  → INSERT INTO orders (lifecycle, delivery, payment metadata)
   → INSERT INTO order_items (× N)
   → UPDATE products SET stock_quantity = stock_quantity - $1
 COMMIT
@@ -518,6 +522,20 @@ Phase 07 implements order processing:
 - Stock never goes negative (concurrency-safe via row locking)
 - Frontend checkout with auth check and cart clearing only on success
 
+## Order Lifecycle and Customer Cancellation
+
+Orders use lower-case lifecycle states: `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `completed`, and `cancelled`. New orders remain `confirmed` for compatibility. Customers can cancel `pending`, `confirmed`, and `processing` orders; `shipped`, `delivered`, `completed`, and `cancelled` are not cancellable. The backend enforces these rules.
+
+### Cancel an order
+
+```http
+POST /api/orders/:id/cancel
+```
+
+Authentication is required. An optional `reason` is limited to 500 characters. The endpoint locks the authenticated customer's order, locks affected products, restores each recorded order-item quantity exactly once, records cancellation metadata, and commits all changes atomically. Repeated and concurrent requests are idempotent. The order and its historical items remain in the database.
+
+Cancellation sets `status = 'cancelled'`, `cancelled_at`, `cancelled_by_user_id`, and `cancellation_reason` when supplied. A `PENDING` payment status becomes `CANCELLED`; no refund or payment capture is claimed.
+
 ## Order History
 
 ### Endpoints
@@ -544,6 +562,14 @@ Both require authentication (JWT via HttpOnly cookie).
 - `order_items.unit_price` stores the price at purchase time.
 - Historical orders show the stored `unit_price`, not the current `products.price`.
 - The stored `orders.total_amount` is the authoritative historical total.
+
+### Lifecycle fields
+
+- `createdAt` remains the original placement timestamp.
+- `estimatedDeliveryFrom` and `estimatedDeliveryTo` persist the 7th and 14th Monday–Friday working days after placement; they are not recalculated on reads.
+- `paymentMethod`, `paymentStatus`, and `paymentProvider` contain only safe selection metadata.
+- `cancelledAt`, `cancelledByUserId`, and `cancellationReason` are populated only for cancelled orders.
+- Cancelled orders remain visible in order history and order detail responses.
 
 ### Frontend
 
