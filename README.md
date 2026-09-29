@@ -85,6 +85,182 @@ simple-ecommerce-store/
 └── README.md
 ```
 
+## Docker Setup (One Command)
+
+The quickest way to run the whole application — frontend, backend and PostgreSQL —
+without installing Node.js or PostgreSQL on your machine.
+
+### Prerequisites
+
+- Docker Desktop (or Docker Engine + Docker Compose v2)
+
+### Clone
+
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
+
+### Environment (optional)
+
+```bash
+cp .env.example .env
+```
+
+The committed defaults already work for local development, so this step is optional.
+Copy the file only if you want to change ports, credentials or secrets.
+
+### Start
+
+```bash
+docker compose up -d
+```
+
+On the first run Compose builds the two images, starts PostgreSQL, creates the
+database schema, applies the migrations and loads the seed products, then starts the
+backend and the frontend. Later runs reuse the existing database volume and skip the
+seed step, so product edits made locally are not overwritten.
+
+### Open
+
+Frontend:
+
+```
+http://localhost:8080
+```
+
+Backend API (health check):
+
+```
+http://localhost:5000/api/health
+```
+
+### Docker Architecture
+
+```text
+        Browser
+           │
+           │  http://localhost:8080
+           ▼
+   ┌───────────────────┐
+   │  Frontend         │   nginx:alpine
+   │  (static files)   │   serves frontend/ + proxies /api → backend:5000
+   └─────────┬─────────┘
+             │
+             │  http://localhost:5000  (API calls from the page)
+             ▼
+   ┌───────────────────┐
+   │  Backend          │   node:20-alpine
+   │  Express + pg     │   DB_HOST=postgres
+   └─────────┬─────────┘
+             │
+             │  postgres:5432  (Compose network only)
+             ▼
+   ┌───────────────────┐
+   │  PostgreSQL       │   postgres:16-alpine
+   └─────────┬─────────┘
+             │
+             ▼
+   ┌───────────────────┐
+   │  postgres_data    │   named Docker volume
+   │  (persistent)     │   survives `docker compose down`
+   └───────────────────┘
+```
+
+Notes on the architecture:
+
+- **PostgreSQL is not published to the host.** The backend reaches it as
+  `postgres:5432` over the Compose network. See *Connecting to PostgreSQL* below if
+  you want a host connection for a SQL client.
+- **A `db-init` service** prepares the database before the backend starts. It runs
+  `npm run db:setup`, which applies `database/schema.sql` (only if the core tables are
+  missing), then the migrations (which skip files already applied), then the seed —
+  but **only when the products table is empty**, so restarting the stack never
+  overwrites product edits. The whole script is idempotent and never drops, truncates
+  or deletes data. The service exits after finishing, which is expected — `Exited (0)`
+  for `db-init` is not a failure.
+- **The frontend image also proxies `/api`** to the backend, so the same origin can be
+  used if you prefer. The page's API base URL is derived from the browser's hostname
+  and port 5000, which is why the backend port is published as well.
+
+### Stop
+
+```bash
+docker compose down
+```
+
+Containers are removed. The database volume is kept.
+
+### Rebuild
+
+Needed after changing a Dockerfile, adding a dependency, or changing any
+frontend/backend source file:
+
+```bash
+docker compose up -d --build
+```
+
+### Reset the local database
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+> **Warning:** `docker compose down -v` deletes the `postgres_data` volume and
+> **destroys all local database data**, including any accounts and orders you created.
+> Only run this when you intentionally want a clean database.
+
+### Troubleshooting
+
+**Port already in use.** Change the host-side ports in `.env`:
+
+```env
+FRONTEND_PORT=8081
+BACKEND_PORT=5001
+```
+
+Then update `CORS_ORIGIN` in the same file to use `8081`/`5001`, and run
+`docker compose up -d` again. Only the host side changes; the containers keep their
+internal ports, so no other file needs editing.
+
+**Containers not starting.** Inspect what happened:
+
+```bash
+docker compose ps
+docker compose logs
+docker compose logs backend
+```
+
+**Backend is restarting or reports a database error.** PostgreSQL may not be ready
+yet. The Compose file already waits for `pg_isready` and for `db-init` to finish, so
+this usually resolves itself; `docker compose logs db-init` shows whether schema and
+migrations applied cleanly.
+
+**Configuration changed but nothing happened.** Rebuild:
+
+```bash
+docker compose up -d --build
+```
+
+**Database looks wrong.** Reset it with the warning above:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+**Connecting to PostgreSQL from a host SQL client** (DBeaver, psql). The port is not
+published by default. Add a mapping to the `postgres` service in `docker-compose.yml`:
+
+```yaml
+    ports:
+      - "5432:5432"
+```
+
+Then connect to `localhost:5432` with the `POSTGRES_USER` / `POSTGRES_PASSWORD` from
+your `.env`. This is for local development only.
+
 ## Local Setup
 
 ### Backend
@@ -102,6 +278,23 @@ The backend will start on `http://localhost:5000`.
 Serve the `/frontend` folder using a local development server such as VS Code Live Server (or any static file server).
 
 Open `http://localhost:5500` (or the port Live Server assigns).
+
+This is the no-Docker path. If you just cloned the repository and want everything in
+one step, use [Docker Setup](#docker-setup-one-command) instead.
+
+### Database
+
+The backend expects the schema to exist before it starts. For a fresh local database:
+
+```bash
+npm run db:setup
+```
+
+That applies `database/schema.sql` if the core tables are missing, then any migrations
+that have not been applied yet, then the seed data **only if the products table is
+empty**. Each step skips work that is already done, so it is safe to re-run and it
+will not overwrite product edits. It is the same command the Docker `db-init` service
+runs.
 
 ## Environment Variables
 
