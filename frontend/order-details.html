@@ -65,7 +65,9 @@
       </div>
 
 
-      <div id="details-container" aria-live="polite">
+      <div id="details-container">
+
+        <p id="order-action-status" class="sr-only" role="status" aria-live="polite"></p>
 
         <!-- Loading -->
 
@@ -89,15 +91,21 @@
 
           <h2>Unable to load order</h2>
 
-          <p>
-            There was a problem fetching this order.
-            Please try again later.
-          </p>
+        <p id="order-error-message">
+          We couldn't load this order. Please try again.
+        </p>
+
+        <div class="orders-state-actions">
+          <button class="btn btn-secondary" id="retry-order" type="button">
+            <i class="ri-refresh-line" aria-hidden="true"></i>
+            Try Again
+          </button>
 
           <a class="btn btn-secondary" href="orders.html">
             <i class="ri-arrow-left-line" aria-hidden="true"></i>
             Back to Orders
           </a>
+        </div>
         </div>
 
 
@@ -153,6 +161,61 @@
   </main>
 
 
+  <div id="cancel-dialog" class="order-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title"
+    aria-describedby="cancel-dialog-description" aria-hidden="true" hidden>
+    <div class="order-dialog-panel">
+
+      <button type="button" id="cancel-dialog-close" class="order-dialog-close" aria-label="Close cancellation dialog">
+        <i class="ri-close-line" aria-hidden="true"></i>
+      </button>
+
+      <div class="order-dialog-icon">
+        <i class="ri-error-warning-line" aria-hidden="true"></i>
+      </div>
+
+      <h2 id="cancel-dialog-title">Cancel this order?</h2>
+
+      <p id="cancel-dialog-description">
+        You are about to cancel
+        <strong id="cancel-dialog-order"></strong>. Cancelling ends the fulfillment
+        process for this order. The store releases the reserved stock automatically.
+        This action cannot be undone.
+      </p>
+
+      <form id="cancel-form" novalidate>
+        <div class="order-dialog-field">
+          <label for="cancel-reason">Reason for cancellation <span class="optional-note">(optional)</span></label>
+
+          <textarea id="cancel-reason" name="reason" rows="4" maxlength="500"
+            aria-describedby="cancel-reason-hint cancel-reason-error"></textarea>
+
+          <div class="order-dialog-field-meta">
+            <span id="cancel-reason-hint" class="order-dialog-hint">Up to 500 characters.</span>
+            <span id="cancel-reason-counter" class="order-dialog-counter">0 / 500</span>
+          </div>
+
+          <span id="cancel-reason-error" class="error-text" role="alert"></span>
+        </div>
+
+        <p id="cancel-dialog-error" class="order-dialog-error" role="alert" hidden></p>
+
+        <div class="order-dialog-actions">
+          <button type="button" id="cancel-dialog-keep" class="btn btn-secondary">Keep Order</button>
+
+          <button type="submit" id="cancel-dialog-confirm" class="btn btn-cancel">
+            <span class="btn-text">Cancel Order</span>
+            <span class="btn-loading" style="display: none;">
+              <i class="ri-loader-4-line ri-spin" aria-hidden="true"></i>
+              Cancelling...
+            </span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+
   <!-- ==================== FOOTER ==================== -->
 
   <footer class="site-footer">
@@ -192,7 +255,7 @@
       <div class="footer-column">
         <h3>Account</h3>
         <a href="orders.html">My orders</a>
-        <a href="account.html">My account</a>
+        <a href="my-account.html">My account</a>
       </div>
 
 
