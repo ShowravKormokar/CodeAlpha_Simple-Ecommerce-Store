@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "migrations": "node scripts/run-migrations.js",
     "seed": "node scripts/seed.js",
+    "db:setup": "node scripts/db-setup.js",
     "test": "jest --detectOpenHandles --forceExit"
   },
   "keywords": [],
