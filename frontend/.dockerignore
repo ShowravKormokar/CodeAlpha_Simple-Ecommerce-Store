@@ -1,0 +1,29 @@
+# Build context for the frontend image. The context is ./frontend, so these patterns
+# apply to the frontend folder only.
+
+# There is no package.json or build step in the frontend, but keep host artefacts out
+# of the image in case a developer adds tooling later.
+node_modules
+npm-debug.log*
+package-lock.json
+
+# Local-only files that must not be published.
+.env
+.env.*
+!.env.example
+
+# Docker files are not needed inside the image.
+Dockerfile
+.dockerignore
+
+# Repository noise
+.git
+.gitignore
+.gitattributes
+.DS_Store
+
+# Logs
+*.log
+
+# Markdown and local documentation are not part of the served site.
+*.md
