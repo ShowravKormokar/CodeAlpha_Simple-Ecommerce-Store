@@ -1,0 +1,33 @@
+# Build context for the backend image. The context is ./backend, so these patterns
+# apply to the backend folder only.
+
+# Installed inside the image by `npm ci`. Copying host modules in would bake in
+# OS-specific binaries and stale dependencies.
+node_modules
+
+# Local secrets. backend/.env holds real developer credentials and must never end
+# up inside an image. The committed template stays.
+.env
+.env.*
+!.env.example
+
+# Test-only material; the runtime image does not run tests.
+tests
+coverage
+jest.config.js
+test-rating.mjs
+test-rating-edge.mjs
+
+# Docker build files are not needed inside the image.
+Dockerfile
+.dockerignore
+
+# VCS and OS noise
+.git
+.gitignore
+.gitattributes
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
