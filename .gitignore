@@ -3,3 +3,9 @@ node_modules/
 *.log
 .DS_Store
 /client
+
+# Local environment files. The committed templates stay tracked so a fresh clone
+# still documents the expected variables.
+.env.local
+.env.*.local
+!.env.example
