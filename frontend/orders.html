@@ -67,7 +67,9 @@
     </section>
 
 
-    <section id="orders-container" class="orders-container" aria-live="polite">
+    <section id="orders-container" class="orders-container">
+
+      <p id="orders-status" class="sr-only" role="status" aria-live="polite"></p>
 
       <!-- Loading -->
 
@@ -89,9 +91,8 @@
 
         <h2>Unable to load your orders</h2>
 
-        <p>
-          There was a problem fetching your order history.
-          Please try again.
+        <p id="orders-error-message">
+          We couldn't load your orders. Please try again.
         </p>
 
         <button class="btn btn-secondary" id="retry-orders" type="button">
@@ -170,7 +171,7 @@
       <div class="footer-column">
         <h3>Account</h3>
         <a href="orders.html">My orders</a>
-        <a href="account.html">My account</a>
+        <a href="my-account.html">My account</a>
       </div>
 
 
