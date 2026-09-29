@@ -288,12 +288,33 @@ function escapeLike(value) {
 function appendCursorPredicate(where, values, parsed, cursorValues) {
   if (cursorValues === undefined) return;
   const definition = SORT_DEFINITIONS[parsed.sort];
-  const params = cursorValues.map((value) => {
+  const params = cursorValues.map((value, index) => {
     values.push(value);
-    return `$${values.length}`;
+    const field = definition.fields[index];
+    const placeholder = `$${values.length}`;
+    /* Without an explicit cast a row comparison resolves the unknown parameter as
+       text, and the ISO string sorts lexicographically instead of chronologically. */
+    return field === "created_at" ? `${placeholder}::timestamptz` : placeholder;
   });
-  const comparison = definition.directions.map((direction) => direction === "DESC" ? "<" : ">").join(", ");
-  where.push(`(${definition.fields.map((field) => `p.${field}`).join(", ")}) ${comparison} (${params.join(", ")})`);
+
+  /* Every sort definition orders all of its fields in the same direction, so the
+     row comparison takes a single operator. Mixing operators here would build
+     invalid SQL, because a row constructor is compared as a whole. */
+  const directions = new Set(definition.directions);
+  if (directions.size > 1) {
+    throw new Error(`Sort '${parsed.sort}' mixes sort directions, which row comparison cannot express`);
+  }
+
+  const operator = definition.directions[0] === "DESC" ? "<" : ">";
+  /* Timestamps are compared at millisecond precision because that is all a cursor can
+     carry (a JS Date has no sub-millisecond precision). Without truncating the column
+     to match, products sharing a created_at down to the millisecond never fall
+     through to the id tiebreaker and the same page repeats forever. */
+  const columns = definition.fields
+    .map((field) => (field === "created_at" ? `date_trunc('milliseconds', p.${field})` : `p.${field}`))
+    .join(", ");
+
+  where.push(`(${columns}) ${operator} (${params.join(", ")})`);
 }
 
 function buildQuery(parsed) {
