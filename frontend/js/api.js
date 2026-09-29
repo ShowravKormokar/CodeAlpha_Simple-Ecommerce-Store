@@ -153,6 +153,15 @@ export async function getOrderById(orderId) {
   return { authenticated: true, data: data.data };
 }
 
+export async function cancelOrder(orderId, reason = null) {
+  const { response, data } = await request(`/orders/${orderId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+
+  return { status: response.status, data };
+}
+
 // POST /api/orders/:orderId/items/:orderItemId/rating
 export async function submitOrderItemRating(orderId, orderItemId, rating) {
   const { response, data } = await request(
