@@ -164,6 +164,14 @@ function clearFieldError(fieldName) {
   if (input?.value.trim()) setFieldError(fieldName, "");
 }
 
+function getFieldElements(formElement, fieldName) {
+  const field = formElement.elements.namedItem(fieldName);
+
+  if (!field) return [];
+  if (typeof field.length === "number") return Array.from(field);
+  return [field];
+}
+
 function createPlaceholderImage() {
   return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect width='60' height='60' fill='%23f1f5f9'/%3E%3C/svg%3E";
 }
@@ -276,8 +284,14 @@ function collectShippingInfo() {
   };
 }
 
+function getSelectedValue(formElement, fieldName) {
+  const field = formElement.elements.namedItem(fieldName);
+
+  return field?.value || "";
+}
+
 function selectedPaymentMethod() {
-  return form.elements.namedItem("paymentMethod")?.value || "CASH_ON_DELIVERY";
+  return getSelectedValue(form, "paymentMethod") || "CASH_ON_DELIVERY";
 }
 
 function setPaymentStatus(message) {
@@ -475,16 +489,20 @@ async function handleSubmit(event) {
   }
 }
 
-form.elements.namedItem("paymentMethod")?.addEventListener("change", (event) => {
-  const method = event.target.value;
-  resetPaymentState(method);
-  updateProviderVisibility();
-  setInlineError("");
-  if (method === "CARD") openPaymentDialog("card");
-  if (method === "MOBILE_BANKING") {
-    const provider = mobilePaymentForm.elements.namedItem("mobileProvider")?.value;
-    if (provider) openPaymentDialog("mobile", provider);
-  }
+const paymentMethodInputs = getFieldElements(form, "paymentMethod");
+
+paymentMethodInputs.forEach((input) => {
+  input.addEventListener("change", (event) => {
+    const method = event.target.value;
+    resetPaymentState(method);
+    updateProviderVisibility();
+    setInlineError("");
+    if (method === "CARD") openPaymentDialog("card");
+    if (method === "MOBILE_BANKING") {
+      const provider = getSelectedValue(mobilePaymentForm, "mobileProvider");
+      if (provider) openPaymentDialog("mobile", provider);
+    }
+  });
 });
 
 document.addEventListener("change", (event) => {
