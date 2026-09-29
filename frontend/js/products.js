@@ -27,6 +27,8 @@ const maxPriceFilter = document.getElementById("max-price-filter");
 const priceFilterError = document.getElementById("price-filter-error");
 const sortFilter = document.getElementById("sort-filter");
 const activeFiltersEl = document.getElementById("active-filters");
+const discoverySummaryEl = document.getElementById("discovery-summary");
+const productsContainerEl = document.getElementById("products-container");
 const clearAllBtn = document.getElementById("clear-all-btn");
 const loadMoreContainer = document.getElementById("load-more-container");
 const loadMoreBtn = document.getElementById("load-more-btn");
@@ -65,25 +67,50 @@ const state = {
   hasNextPage: false,
   loading: false,
   loadingMore: false,
+  searchPending: false,
+  hasLoaded: false,
   requestVersion: 0,
+  contextSignature: "",
 };
 
 let currentProducts = [];
 let searchDebounceTimer = null;
 let activeRequestController = null;
 
+function setBusy(isBusy) {
+  productsContainerEl?.setAttribute("aria-busy", String(isBusy));
+  productsContainerEl?.classList.toggle("is-updating", isBusy);
+}
+
+function endBusy() {
+  setBusy(false);
+}
+
+/* A result replacement keeps the current grid on screen so a small filter change
+   does not flash a blank page. Only the first load shows the full panel. */
 function showLoading() {
+  const keepResults = state.hasLoaded && state.products.length > 0;
+
   state.loading = true;
-  loadingEl.style.display = "flex";
+  loadingEl.style.display = keepResults ? "none" : "flex";
   emptyEl.style.display = "none";
   errorEl.style.display = "none";
-  productsGrid.style.display = "none";
-  loadMoreContainer.style.display = "none";
-  updateProductCount("Loading products...");
+  productsGrid.style.display = keepResults ? "grid" : "none";
+  loadMoreContainer.style.display = keepResults ? loadMoreContainer.style.display : "none";
+
+  if (keepResults) {
+    setBusy(true);
+    updateProductCount("Updating results...");
+  } else {
+    setBusy(false);
+    updateProductCount("Loading products...");
+  }
 }
 
 function showError(message = "We couldn't connect to the store right now. Please try again.") {
   state.loading = false;
+  state.hasLoaded = true;
+  endBusy();
   loadingEl.style.display = "none";
   emptyEl.style.display = "none";
   errorEl.style.display = "flex";
@@ -91,29 +118,34 @@ function showError(message = "We couldn't connect to the store right now. Please
   loadMoreContainer.style.display = "none";
   errorMessageEl.textContent = message;
   updateProductCount("Products unavailable");
+  renderDiscoverySummary();
 }
 
 function showEmpty() {
   state.loading = false;
+  state.hasLoaded = true;
+  endBusy();
   loadingEl.style.display = "none";
   emptyEl.style.display = "flex";
   errorEl.style.display = "none";
   productsGrid.style.display = "none";
   loadMoreContainer.style.display = "none";
-  emptyMessageEl.textContent = hasActiveDiscovery()
-    ? "We couldn't find products matching your search and filters."
-    : "There are no products available right now.";
+  emptyMessageEl.textContent = getEmptyMessage();
   updateProductCount("0 products");
+  renderDiscoverySummary();
 }
 
 function showProducts(products) {
   state.loading = false;
+  state.hasLoaded = true;
+  endBusy();
   loadingEl.style.display = "none";
   emptyEl.style.display = "none";
   errorEl.style.display = "none";
   productsGrid.style.display = "grid";
   loadMoreContainer.style.display = state.hasNextPage ? "flex" : "none";
   updateLoadedProductCount();
+  renderDiscoverySummary();
   renderProducts(products);
 }
 
@@ -138,7 +170,15 @@ function updateLoadedProductCount() {
    ========================================================= */
 
 function renderProducts(products) {
-  productsGrid.innerHTML = "";
+  productsGrid.replaceChildren();
+  appendProductCards(products);
+}
+
+/* Load More appends only the new cards. The grid is not rebuilt, so scroll position
+   and the already-rendered cards survive. */
+function appendProductCards(products) {
+  if (!products.length) return;
+
   const fragment = document.createDocumentFragment();
 
   products.forEach((product) => {
@@ -146,7 +186,6 @@ function renderProducts(products) {
   });
 
   productsGrid.appendChild(fragment);
-  attachProductEvents();
 }
 
 function createProductCard(product) {
@@ -348,28 +387,26 @@ function createProductCard(product) {
    CART
    ========================================================= */
 
-function attachProductEvents() {
-  const buttons = productsGrid.querySelectorAll(
-    ".product-add-button:not(:disabled)"
-  );
+/* One delegated listener for the whole grid, registered once. Re-rendering the grid
+   therefore cannot stack duplicate handlers on the add-to-cart buttons. */
+function handleGridClick(event) {
+  const button = event.target.closest(".product-add-button");
 
-  buttons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const productId = Number(button.dataset.productId);
+  if (!button || button.disabled || !productsGrid.contains(button)) {
+    return;
+  }
 
-      if (!Number.isInteger(productId) || productId <= 0) {
-        return;
-      }
+  const productId = Number(button.dataset.productId);
 
-      const product = currentProducts.find(
-        (item) => Number(item.id) === productId
-      );
+  if (!Number.isInteger(productId) || productId <= 0) {
+    return;
+  }
 
-      if (!product) return;
+  const product = currentProducts.find((item) => Number(item.id) === productId);
 
-      handleAddToCart(product, button);
-    });
-  });
+  if (!product) return;
+
+  handleAddToCart(product, button);
 }
 
 function handleAddToCart(product, button) {
@@ -447,19 +484,21 @@ function formatPrice(value) {
   }).format(amount);
 }
 
-function hasActiveDiscovery() {
+function hasActiveFilters() {
   return Boolean(
-    state.query ||
-      state.category ||
+    state.category ||
       state.brand ||
       state.subcategory ||
-      state.minPrice ||
-      state.maxPrice ||
+      state.minPrice !== "" ||
+      state.maxPrice !== "" ||
       state.inStock ||
       state.sale ||
-      state.featured ||
-      state.sort !== DEFAULT_SORT
+      state.featured
   );
+}
+
+function hasActiveDiscovery() {
+  return Boolean(state.query) || hasActiveFilters() || state.sort !== DEFAULT_SORT;
 }
 
 function readPrice(value) {
@@ -484,11 +523,50 @@ function readUrlState() {
   state.sort = VALID_SORTS.has(sort) ? sort : DEFAULT_SORT;
 }
 
+/* A <select> silently drops a value it does not contain, which would make a shared
+   URL such as ?brand=old-brand disagree with the control and then vanish on the next
+   change. Keep the value visible instead of substituting a different one. */
+function setSelectValue(select, value) {
+  if (!value) {
+    select.value = "";
+    return;
+  }
+
+  const exists = Array.from(select.options || []).some(
+    (option) => option.value === value
+  );
+
+  if (!exists) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = `${value} (unavailable)`;
+    option.dataset.unavailable = "true";
+    select.appendChild(option);
+  }
+
+  select.value = value;
+}
+
+function getSearchContextSignature() {
+  return [
+    state.query,
+    state.category,
+    state.brand,
+    state.subcategory,
+    state.minPrice,
+    state.maxPrice,
+    state.inStock,
+    state.sale,
+    state.featured,
+    state.sort,
+  ].join("|");
+}
+
 function syncControlsFromState() {
   searchInput.value = state.query;
-  categoryFilter.value = state.category;
-  brandFilter.value = state.brand;
-  subcategoryFilter.value = state.subcategory;
+  setSelectValue(categoryFilter, state.category);
+  setSelectValue(brandFilter, state.brand);
+  setSelectValue(subcategoryFilter, state.subcategory);
   inStockFilter.checked = state.inStock;
   saleFilter.checked = state.sale;
   featuredFilter.checked = state.featured;
@@ -499,6 +577,7 @@ function syncControlsFromState() {
   priceFilterError.hidden = true;
   priceFilterError.textContent = "";
   renderActiveFilters();
+  renderDiscoverySummary();
 }
 
 function buildApiParams(cursor = null) {
@@ -520,25 +599,32 @@ function buildApiParams(cursor = null) {
   return params;
 }
 
+const URL_PARAM_ORDER = [
+  "q",
+  "category",
+  "brand",
+  "subcategory",
+  "min_price",
+  "max_price",
+  "in_stock",
+  "sale",
+  "featured",
+  "sort",
+];
+
 function buildDiscoveryUrl() {
   const url = new URL(window.location.href);
-  [
-    "q",
-    "category",
-    "brand",
-    "subcategory",
-    "min_price",
-    "max_price",
-    "in_stock",
-    "sale",
-    "featured",
-    "sort",
-    "cursor",
-  ].forEach((key) => url.searchParams.delete(key));
+
+  /* Drop every discovery parameter, including ones the page does not support
+     (limit, cursor, hand-edited junk), so the address bar always holds exactly the
+     current intent in a fixed order. */
+  [...url.searchParams.keys()].forEach((key) => url.searchParams.delete(key));
 
   const params = buildApiParams();
   delete params.limit;
-  Object.entries(params).forEach(([key, value]) => {
+
+  URL_PARAM_ORDER.forEach((key) => {
+    const value = params[key];
     if (value !== "" && value !== null && value !== undefined) {
       url.searchParams.set(key, String(value));
     }
@@ -547,13 +633,31 @@ function buildDiscoveryUrl() {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+function currentLocationString() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+/* Returns false when the state already matches the address bar, so a no-op change
+   does not add a dead history entry. */
 function updateUrl(push = true) {
   const nextUrl = buildDiscoveryUrl();
+
+  if (nextUrl === currentLocationString()) {
+    return false;
+  }
+
   if (push) {
     window.history.pushState({}, "", nextUrl);
   } else {
     window.history.replaceState({}, "", nextUrl);
   }
+
+  return true;
+}
+
+/* Strips invalid or unknown parameters from the address bar without adding history. */
+function canonicalizeUrl() {
+  return updateUrl(false);
 }
 
 function validatePriceRange() {
@@ -591,51 +695,130 @@ function readControlsIntoState() {
   return true;
 }
 
+/* Invalidates the cursor and the paging UI, but deliberately keeps the rendered
+   products so a replacement fetch can swap content without a blank flash. */
 function resetProductsForDiscovery() {
-  state.products = [];
   state.nextCursor = null;
   state.hasNextPage = false;
   state.loadingMore = false;
-  currentProducts = [];
-  loadMoreBtn.disabled = false;
+  loadMoreBtn.disabled = state.searchPending;
   loadMoreLabel.textContent = "Load more products";
   loadMoreStatus.textContent = "";
   loadMoreContainer.style.display = "none";
 }
 
 async function commitDiscoveryChange() {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = null;
+  state.searchPending = false;
+  loadMoreBtn.disabled = false;
+
   state.query = searchInput.value.trim();
   searchInput.value = state.query;
   clearSearchBtn.hidden = state.query.length === 0;
+
   if (!readControlsIntoState()) return;
-  clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = null;
+
   resetProductsForDiscovery();
   renderActiveFilters();
+  renderDiscoverySummary();
   updateUrl(true);
   await loadProducts();
+}
+
+function getEmptyMessage() {
+  if (state.query) {
+    return `No products match “${state.query}”. Try a different search or clear your filters.`;
+  }
+  if (hasActiveFilters()) {
+    return "No products match the selected filters. Try widening them.";
+  }
+  if (state.sort !== DEFAULT_SORT) {
+    return "No products are available in this collection right now.";
+  }
+  return "There are no products available right now.";
+}
+
+function getFilterSummaryParts() {
+  const parts = [];
+
+  if (state.category) parts.push(state.category);
+  if (state.brand) parts.push(state.brand);
+  if (state.subcategory) parts.push(state.subcategory);
+  if (state.minPrice !== "" || state.maxPrice !== "") {
+    const min = state.minPrice === "" ? formatPrice(0) : formatPrice(state.minPrice);
+    const max = state.maxPrice === "" ? "any" : formatPrice(state.maxPrice);
+    parts.push(`Price ${min}–${max}`);
+  }
+  if (state.inStock) parts.push("In stock");
+  if (state.sale) parts.push("On sale");
+  if (state.featured) parts.push("Featured");
+  if (state.sort !== DEFAULT_SORT) parts.push(`Sorted by ${sortLabel(state.sort)}`);
+
+  return parts;
+}
+
+function renderDiscoverySummary() {
+  if (!discoverySummaryEl) return;
+
+  const parts = getFilterSummaryParts();
+  let text = "All products";
+
+  if (state.query) {
+    text = `Results for “${state.query}”`;
+  } else if (parts.length) {
+    text = "Filtered results";
+  }
+
+  if (state.query && parts.length) {
+    text = `${text} · ${parts.join(" · ")}`;
+  } else if (!state.query && parts.length) {
+    text = parts.join(" · ");
+  }
+
+  discoverySummaryEl.textContent = text;
+}
+
+function sortLabel(value) {
+  const options = Array.from(sortFilter.options || []);
+  const selected = options.find((option) => option.value === value);
+  return selected ? selected.textContent : value;
+}
+
+function getActiveFilterDescriptors() {
+  return [
+    { key: "query", value: state.query, label: `Search: ${state.query}` },
+    { key: "category", value: state.category, label: `Category: ${state.category}` },
+    { key: "brand", value: state.brand, label: `Brand: ${state.brand}` },
+    { key: "subcategory", value: state.subcategory, label: `Subcategory: ${state.subcategory}` },
+    {
+      key: "minPrice",
+      value: state.minPrice,
+      label: state.minPrice === "" ? "" : `Min price: ${formatPrice(state.minPrice)}`,
+    },
+    {
+      key: "maxPrice",
+      value: state.maxPrice,
+      label: state.maxPrice === "" ? "" : `Max price: ${formatPrice(state.maxPrice)}`,
+    },
+    { key: "inStock", value: state.inStock ? "true" : "", label: "In stock" },
+    { key: "sale", value: state.sale ? "true" : "", label: "On sale" },
+    { key: "featured", value: state.featured ? "true" : "", label: "Featured" },
+    {
+      key: "sort",
+      value: state.sort !== DEFAULT_SORT ? state.sort : "",
+      label: state.sort === DEFAULT_SORT ? "" : `Sort: ${sortLabel(state.sort)}`,
+    },
+  ];
 }
 
 function renderActiveFilters() {
   activeFiltersEl.replaceChildren();
   clearAllBtn.hidden = !hasActiveDiscovery();
 
-  const filters = [
-    ["query", state.query, `Search: ${state.query}`],
-    ["category", state.category, `Category: ${state.category}`],
-    ["brand", state.brand, `Brand: ${state.brand}`],
-    ["subcategory", state.subcategory, `Subcategory: ${state.subcategory}`],
-    ["minPrice", state.minPrice, `Min price: $${state.minPrice}`],
-    ["maxPrice", state.maxPrice, `Max price: $${state.maxPrice}`],
-    ["inStock", state.inStock ? "true" : "", "In stock"],
-    ["sale", state.sale ? "true" : "", "On sale"],
-    ["featured", state.featured ? "true" : "", "Featured"],
-    ["sort", state.sort !== DEFAULT_SORT ? state.sort : "", `Sort: ${state.sort}`],
-  ];
-
-  filters
-    .filter(([, value]) => value !== "")
-    .forEach(([key, value, label]) => {
+  getActiveFilterDescriptors()
+    .filter(({ value }) => value !== "")
+    .forEach(({ key, label }) => {
       const chip = document.createElement("span");
       chip.className = "filter-chip";
 
@@ -698,13 +881,22 @@ function appendUniqueProducts(incoming) {
   return unique.length;
 }
 
-function getUserFacingError() {
+function getUserFacingError(error) {
+  const status = Number(error?.status);
+
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    return error?.message || "We couldn't run that search. Please try again.";
+  }
+
   return "We couldn't connect to the store right now. Please try again.";
 }
 
 async function loadProducts() {
   const version = state.requestVersion + 1;
+  const context = getSearchContextSignature();
+
   state.requestVersion = version;
+  state.contextSignature = context;
   activeRequestController?.abort();
   activeRequestController = new AbortController();
   showLoading();
@@ -714,7 +906,7 @@ async function loadProducts() {
       signal: activeRequestController.signal,
     });
 
-    if (version !== state.requestVersion) return;
+    if (version !== state.requestVersion || context !== state.contextSignature) return;
     if (!result || !result.success) {
       throw new Error("Unable to load products");
     }
@@ -737,29 +929,40 @@ async function loadProducts() {
 }
 
 async function loadMoreProducts() {
-  if (!state.hasNextPage || !state.nextCursor || state.loadingMore) return;
+  /* A pending debounce means the committed state is newer than the visible results,
+     so the cursor in hand does not belong to it yet. */
+  if (
+    !state.hasNextPage ||
+    !state.nextCursor ||
+    state.loadingMore ||
+    state.searchPending
+  ) {
+    return;
+  }
 
   const version = state.requestVersion;
+  const context = state.contextSignature;
+  const cursor = state.nextCursor;
   const controller = new AbortController();
-  activeRequestController?.abort();
-  activeRequestController = controller;
+
   state.loadingMore = true;
   loadMoreBtn.disabled = true;
   loadMoreLabel.textContent = "Loading products...";
   loadMoreStatus.textContent = "Loading more products";
 
   try {
-    const result = await getProducts(buildApiParams(state.nextCursor), {
+    const result = await getProducts(buildApiParams(cursor), {
       signal: controller.signal,
     });
-    if (version !== state.requestVersion) return;
+
+    if (version !== state.requestVersion || context !== state.contextSignature) return;
     if (!result || !result.success) throw new Error("Unable to load more products");
 
     const products = Array.isArray(result.data) ? result.data : [];
-    appendUniqueProducts(products);
+    const added = appendUniqueProducts(products);
     state.nextCursor = result.pagination?.nextCursor || null;
     state.hasNextPage = Boolean(result.pagination?.hasNextPage && state.nextCursor);
-    renderProducts(state.products);
+    appendProductCards(products.slice(0, added));
     updateLoadedProductCount();
     loadMoreContainer.style.display = state.hasNextPage ? "flex" : "none";
   } catch (error) {
@@ -769,30 +972,45 @@ async function loadMoreProducts() {
   } finally {
     if (version === state.requestVersion) {
       state.loadingMore = false;
-      loadMoreBtn.disabled = false;
+      loadMoreBtn.disabled = state.searchPending;
       loadMoreLabel.textContent = "Load more products";
       loadMoreStatus.textContent = "";
     }
   }
 }
 
+/* Re-reads the address bar, restores every control, discards the cursor and refetches
+   page one. Used on first load and on Back/Forward. */
 function loadFromUrl() {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = null;
+  state.searchPending = false;
   readUrlState();
   syncControlsFromState();
+  canonicalizeUrl();
   resetProductsForDiscovery();
-  loadProducts();
+  return loadProducts();
 }
 
 searchInput.addEventListener("input", () => {
-  state.query = searchInput.value;
-  clearSearchBtn.hidden = state.query.length === 0;
+  /* Only the draft changes here. state.query stays committed until the debounce
+     fires, so Load More can never pair a new term with an old cursor. */
+  clearSearchBtn.hidden = searchInput.value.length === 0;
   clearTimeout(searchDebounceTimer);
+  state.searchPending = true;
+  loadMoreBtn.disabled = true;
   searchDebounceTimer = window.setTimeout(() => {
     searchDebounceTimer = null;
+    state.searchPending = false;
     commitDiscoveryChange();
   }, SEARCH_DEBOUNCE_MS);
+});
+
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && searchInput.value !== "") {
+    event.preventDefault();
+    clearSearchInput();
+  }
 });
 
 discoveryForm.addEventListener("submit", (event) => {
@@ -800,14 +1018,16 @@ discoveryForm.addEventListener("submit", (event) => {
   commitDiscoveryChange();
 });
 
-clearSearchBtn.addEventListener("click", () => {
+function clearSearchInput() {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = null;
-  state.query = "";
+  state.searchPending = false;
   searchInput.value = "";
   clearSearchBtn.hidden = true;
   commitDiscoveryChange();
-});
+}
+
+clearSearchBtn.addEventListener("click", clearSearchInput);
 
 [categoryFilter, brandFilter, subcategoryFilter, sortFilter, inStockFilter, saleFilter, featuredFilter, minPriceFilter, maxPriceFilter].forEach((control) => {
   control.addEventListener("change", () => {
@@ -833,6 +1053,7 @@ filterToggleBtn.addEventListener("click", () => {
 
 loadMoreBtn.addEventListener("click", loadMoreProducts);
 retryBtn.addEventListener("click", loadProducts);
+productsGrid.addEventListener("click", handleGridClick);
 window.addEventListener("popstate", loadFromUrl);
 
 if (window.matchMedia("(max-width: 820px)").matches) {
@@ -841,9 +1062,6 @@ if (window.matchMedia("(max-width: 820px)").matches) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  readUrlState();
-  syncControlsFromState();
-  resetProductsForDiscovery();
-  loadProducts();
+  loadFromUrl();
   updateGlobalCartCount();
 });
