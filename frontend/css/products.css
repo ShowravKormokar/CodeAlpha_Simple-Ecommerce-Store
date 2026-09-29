@@ -719,12 +719,30 @@
   border-top: 1px solid var(--color-border);
 }
 
+.discovery-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .active-filters {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 7px;
   min-width: 0;
+}
+
+/* While a replacement search is in flight the previous grid stays on screen, dimmed
+   and non-interactive, so it is never mistaken for the current result set. */
+#products-container.is-updating .products-grid {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 120ms ease-in;
 }
 
 .filter-chip {
@@ -819,5 +837,16 @@
   .discovery-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .active-filters {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .filter-chip {
+    flex: 0 0 auto;
   }
 }
