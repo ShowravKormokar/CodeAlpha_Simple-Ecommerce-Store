@@ -1,0 +1,129 @@
+# Simple E-commerce Store — local Docker environment.
+#
+#   docker compose up -d      start everything
+#   docker compose down       stop and remove containers (keeps the database volume)
+#
+# Ports, credentials and secrets can be overridden in a root .env file
+# (copy .env.example). Every value below has a working development default, so the
+# stack also starts without a .env file.
+
+name: simple-ecommerce-store
+
+services:
+  # ---------------------------------------------------------------- database ---
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-simpleEcommerce}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Not published to the host on purpose: only the backend needs it, and the
+    # backend reaches it over the Compose network as `postgres:5432`.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-simpleEcommerce}
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # -------------------------------------------------------------- db bootstrap ---
+  # One-shot service that prepares a fresh database: base schema, migrations, then
+  # seed data. The backend waits for it to finish successfully.
+  #
+  # Every step is idempotent, so this is safe to run again: it skips the base schema
+  # when the tables already exist, the migration runner skips applied files, and the
+  # seed runs only while the products table is empty — restarting the stack never
+  # overwrites product edits. It never drops, truncates or deletes data.
+  db-init:
+    build:
+      context: ./backend
+    # Same image as the backend service, built once.
+    image: simple-ecommerce-store-backend:local
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-simpleEcommerce}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command: ["npm", "run", "db:setup"]
+
+  # ----------------------------------------------------------------- backend ---
+  backend:
+    build:
+      context: ./backend
+    # Shared with db-init so the backend image is only built once.
+    image: simple-ecommerce-store-backend:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # Compose service name, never localhost: containers resolve each other by name.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-simpleEcommerce}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # The frontend is served from FRONTEND_PORT (8080 by default). The backend's
+      # credentials:true CORS needs an explicit origin list — never "*" — because
+      # login relies on an HttpOnly cookie. If you change FRONTEND_PORT, change this
+      # list to match.
+      CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:8080,http://127.0.0.1:8080,http://localhost:5500,http://127.0.0.1:5500}"
+      # Development-only secrets. Override both in .env for anything shared.
+      JWT_SECRET: ${JWT_SECRET:-local-docker-development-jwt-secret-change-me}
+      CURSOR_SECRET: ${CURSOR_SECRET:-local-docker-development-cursor-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      # Plain HTTP on localhost, so the auth cookie must not be Secure-only.
+      # SameSite=lax still works across ports: ports do not affect "site".
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: lax
+    ports:
+      # Host access to the API, for curl, Swagger-style exploration and debugging.
+      # The frontend image also proxies /api to this service.
+      - "${BACKEND_PORT:-5000}:5000"
+    healthcheck:
+      # /api/health reports database connectivity, so this fails if Postgres goes
+      # away, not just if the process stops. Uses the Node binary already in the
+      # image, so no extra package is installed.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5000/api/health').then(r=>r.json()).then(d=>{if(!d.success||d.database!=='connected'){process.exit(1)}}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ---------------------------------------------------------------- frontend ---
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
