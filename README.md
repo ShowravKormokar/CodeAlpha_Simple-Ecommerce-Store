@@ -1,27 +1,1140 @@
 # Simple E-commerce Store
 
-## Current Phase
+A full-stack e-commerce application built as **CodeAlpha Full Stack Software Development Internship — Task 1: Simple E-commerce Store**.
 
-Phase 10 — Integration Testing, Cleanup & Final Documentation
+The original task was intentionally simple:
 
-## Stack
+> Build a basic e-commerce site with product listings, a shopping cart, product details, order processing, and user registration/login.
 
-Frontend:
-- HTML
-- CSS
-- JavaScript
+This implementation goes beyond the minimum assignment requirements by applying **production-oriented software engineering practices** around authentication, authorization, transactional order processing, inventory consistency, product discovery, payment-flow design, order lifecycle management, validation, security, testing, Dockerized development, database migrations, seed management, and technical documentation.
 
-Backend:
-- Node.js
-- Express.js
+The goal is not only to demonstrate that the application works, but to demonstrate **how a maintainable, secure, testable, and scalable full-stack system can be designed and evolved**.
 
-Database:
-- PostgreSQL
+---
 
-## Project Structure
+## 1. Project Overview
 
+### Assignment
+
+**CodeAlpha — Full Stack Software Development Internship**
+**Task 1 — Simple E-commerce Store**
+
+### Original Requirements
+
+* Product listing
+* Product details
+* Shopping cart
+* Order processing
+* User registration/login
+* Database-backed products, users, and orders
+
+### Implementation
+
+The project is implemented as a full-stack web application using:
+
+* **Frontend:** HTML, CSS, Vanilla JavaScript
+* **Backend:** Node.js + Express.js
+* **Database:** PostgreSQL
+* **Authentication:** JWT + HttpOnly cookies
+* **Testing:** Jest
+* **Reverse Proxy / Static Serving:** Nginx
+* **Containerization:** Docker + Docker Compose
+
+The application deliberately avoids frontend frameworks and unnecessary dependencies so that the underlying **HTTP, authentication, state-management, database, transaction, and architecture decisions remain explicit and easy to inspect**.
+
+---
+
+# 2. What This Project Demonstrates
+
+Although the project started as a small internship assignment, the implementation focuses on real engineering concerns that appear in production systems.
+
+### Core application engineering
+
+* Full-stack client/server architecture
+* REST-style API design
+* Modular Express backend
+* Separation of routes, controllers, services, and middleware
+* Centralized API communication on the frontend
+* PostgreSQL relational data modeling
+* Database migrations and seed management
+* Environment-based configuration
+
+### Security engineering
+
+* JWT-based authentication
+* HttpOnly authentication cookies
+* Password hashing with bcrypt
+* Explicit CORS configuration
+* Helmet security headers
+* Input validation
+* Parameterized SQL queries
+* Authorization and resource ownership checks
+* No sensitive payment credentials stored
+* Secrets kept outside source code
+
+### Data integrity
+
+* PostgreSQL transactions
+* Row-level locking with `FOR UPDATE`
+* Server-authoritative prices
+* Server-authoritative stock
+* Atomic order creation
+* Atomic order cancellation and stock restoration
+* Historical price snapshots
+* Idempotent cancellation behavior
+* Database constraints and foreign keys
+
+### Product discovery
+
+* Server-side search
+* Multiple composable filters
+* Server-side sorting
+* Cursor-based pagination
+* Query-context-bound cursors
+* Deterministic pagination ordering
+
+### Application lifecycle
+
+* Authentication
+* Product discovery
+* Cart management
+* Checkout
+* Dummy payment experience
+* Order creation
+* Order tracking
+* Order cancellation
+* Inventory restoration
+* Order history
+* Order details
+* Product ratings
+
+### Engineering operations
+
+* Dockerized development
+* Docker Compose orchestration
+* Nginx reverse proxy
+* PostgreSQL persistent volume
+* Database initialization
+* Migrations
+* Seed scripts
+* Environment configuration
+* Automated testing
+* API documentation
+* Architecture documentation
+* Phase-specific implementation documentation
+
+---
+
+# 3. Feature Overview
+
+## Authentication & Account Management
+
+The application provides a secure authentication flow using JWT authentication stored in an HttpOnly cookie.
+
+### Features
+
+* User registration
+* User login
+* User logout
+* Current-user/session retrieval
+* Password hashing
+* Protected API routes
+* Authentication-aware navigation
+* Account information
+* Authenticated order history
+
+### Authentication architecture
+
+```text
+Browser
+   │
+   │ Login / Register
+   ▼
+Express API
+   │
+   ├── Validate input
+   ├── Hash / verify password
+   └── Issue JWT
+          │
+          ▼
+    HttpOnly Cookie
+          │
+          ▼
+Browser automatically sends cookie
+          │
+          ▼
+Authentication Middleware
+          │
+          └── req.userId
 ```
+
+The JWT is never stored in `localStorage` or `sessionStorage` and is never returned as a normal API response value.
+
+### Security properties
+
+* `HttpOnly` cookie
+* `SameSite` protection
+* `Secure` cookie in production
+* Explicit CORS origin
+* Credentialed requests
+* Minimal JWT payload
+* Password hashing with bcrypt
+* Environment-based JWT secret
+* Proper logout cookie clearing
+
+---
+
+# 4. Product Catalog
+
+The product system supports both basic catalog browsing and more advanced product discovery.
+
+### Product capabilities
+
+* Product listing
+* Product details
+* Product images
+* Product descriptions
+* Product pricing
+* Stock quantity
+* Categories
+* Brands
+* Subcategories
+* Featured products
+* Sale products
+* Product metadata/specifications
+* Product availability states
+
+The frontend dynamically consumes the product API instead of maintaining a duplicated product dataset.
+
+---
+
+# 5. Product Search, Filtering & Sorting
+
+Product discovery is implemented as a **database-backed query pipeline**, rather than downloading the entire catalog and filtering it in JavaScript.
+
+### Search
+
+Search supports case-insensitive matching across meaningful product fields such as:
+
+* Name
+* SKU
+* Brand
+* Category
+* Subcategory
+* Description
+* Short description
+
+### Filters
+
+Supported filters include:
+
+* Category
+* Brand
+* Subcategory
+* Featured
+* Sale
+* Minimum price
+* Maximum price
+* Stock availability
+
+### Sorting
+
+Supported server-side sorting includes:
+
+* ID ascending
+* Newest
+* Oldest
+* Price ascending
+* Price descending
+* Name ascending
+* Name descending
+* Featured
+
+### Cursor pagination
+
+The product API uses **cursor/keyset pagination** rather than traditional offset pagination.
+
+```text
+Client
+  │
+  │ q + filters + sort + limit
+  ▼
+Product API
+  │
+  ▼
+PostgreSQL
+  │
+  │ keyset/cursor query
+  ▼
+Products + nextCursor
+  │
+  ▼
+Client
+```
+
+The cursor is opaque, signed, and bound to the query context so that it cannot safely be reused with unrelated filters or sorting.
+
+This design provides a stronger foundation for large product collections than loading the complete dataset into the browser.
+
+---
+
+# 6. Shopping Cart
+
+The shopping cart is intentionally implemented as a **client-side concern**.
+
+Cart state is stored in browser `localStorage`.
+
+### Cart data
+
+Only the following information is persisted:
+
+```json
+[
+  {
+    "productId": 1,
+    "quantity": 2
+  },
+  {
+    "productId": 5,
+    "quantity": 1
+  }
+]
+```
+
+### Important design decision
+
+The cart does **not** store:
+
+* Product price
+* Subtotal
+* Total amount
+* Stock quantity
+* User ID
+* Authentication token
+
+Prices and stock are always authoritative on the backend.
+
+### Cart functionality
+
+* Add product
+* Increase quantity
+* Decrease quantity
+* Remove item
+* Clear cart
+* Merge duplicate products
+* Stock-aware quantity controls
+* Cart item subtotals
+* Cart summary
+* Navigation cart count
+* Safe malformed-localStorage handling
+
+The browser is treated as an **untrusted client**. Cart information is only a temporary intent; the backend makes the final decision when an order is created.
+
+---
+
+# 7. Checkout & Order Processing
+
+Order creation is one of the most important engineering areas of the project.
+
+The frontend never determines the final order price.
+
+### Checkout request
+
+The client sends only:
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "productId": 5,
+      "quantity": 1
+    }
+  ]
+}
+```
+
+Payment selection can also be supplied:
+
+```json
+{
+  "payment": {
+    "method": "CASH_ON_DELIVERY",
+    "provider": null
+  }
+}
+```
+
+The browser does **not** send trusted:
+
+* Prices
+* Subtotals
+* Total amounts
+* Stock values
+* User IDs
+
+---
+
+# 8. Server-Authoritative Order Architecture
+
+When an order is created, the backend:
+
+1. Authenticates the user.
+2. Validates the request.
+3. Merges duplicate product IDs.
+4. Reads products from PostgreSQL.
+5. Locks product rows with `FOR UPDATE`.
+6. Validates product existence.
+7. Validates current stock.
+8. Reads the current database price.
+9. Calculates each item subtotal.
+10. Calculates the authoritative order total.
+11. Calculates the delivery window.
+12. Validates payment metadata.
+13. Creates the order.
+14. Creates order items.
+15. Decrements inventory.
+16. Commits the transaction.
+
+All operations occur inside one PostgreSQL transaction.
+
+```text
+Browser Cart
+(productId + quantity)
+        │
+        ▼
+Authenticated Order API
+        │
+        ▼
+Validate Request
+        │
+        ▼
+Lock Product Rows
+(FOR UPDATE)
+        │
+        ├── Validate stock
+        ├── Read current price
+        ├── Calculate totals
+        └── Validate payment
+        │
+        ▼
+Create Order
+        │
+        ▼
+Create Order Items
+        │
+        ▼
+Decrease Stock
+        │
+        ▼
+COMMIT
+```
+
+If any step fails:
+
+```text
+ROLLBACK
+```
+
+This prevents partial orders and inconsistent inventory.
+
+---
+
+# 9. Inventory Consistency
+
+Inventory is treated as shared mutable state and therefore requires database-level protection.
+
+The system uses PostgreSQL row-level locking:
+
+```sql
+SELECT ...
+FROM products
+WHERE id = ANY($1)
+FOR UPDATE;
+```
+
+This prevents concurrent order requests from consuming the same stock incorrectly.
+
+### Guarantees
+
+* Stock cannot become negative through concurrent order creation.
+* Order creation and stock decrement succeed or fail together.
+* Browser-provided prices are ignored.
+* Browser-provided totals are ignored.
+* Database state is authoritative.
+
+---
+
+# 10. Dummy Payment Experience
+
+The project includes a **realistic payment-selection experience without implementing an actual payment gateway**.
+
+Supported methods:
+
+* Cash on Delivery
+* Card
+* Mobile Banking
+
+The payment layer is intentionally designed as a safe abstraction rather than pretending that a real financial transaction has occurred.
+
+### Security boundary
+
+The application never accepts or stores:
+
+* Full card numbers
+* CVV
+* PIN
+* OTP
+* Banking passwords
+* Payment credentials
+
+Only safe payment-selection metadata is persisted, such as:
+
+* Payment method
+* Provider
+* Payment status
+
+This keeps the assignment realistic while avoiding unsafe handling of financial credentials.
+
+---
+
+# 11. Order Lifecycle
+
+Orders have an explicit lifecycle:
+
+```text
+pending
+   │
+   ▼
+confirmed
+   │
+   ▼
+processing
+   │
+   ▼
+shipped
+   │
+   ▼
+delivered
+   │
+   ▼
+completed
+```
+
+An order can also transition to:
+
+```text
+cancelled
+```
+
+where cancellation is allowed only during appropriate early lifecycle states.
+
+The backend, rather than the frontend, enforces valid lifecycle transitions.
+
+---
+
+# 12. Customer Order Cancellation
+
+Customers can cancel their own eligible orders.
+
+### Endpoint
+
+```http
+POST /api/orders/:id/cancel
+```
+
+### Cancellation flow
+
+```text
+Authenticated Customer
+        │
+        ▼
+Verify Order Ownership
+        │
+        ▼
+Verify Cancellable Status
+        │
+        ▼
+Lock Order
+        │
+        ▼
+Lock Related Product Rows
+        │
+        ▼
+Restore Ordered Quantities
+        │
+        ▼
+Record Cancellation Metadata
+        │
+        ▼
+Update Payment Status
+        │
+        ▼
+COMMIT
+```
+
+Cancellation is atomic and designed to be safe under repeated or concurrent requests.
+
+The original order and order items are preserved for historical purposes rather than deleted.
+
+---
+
+# 13. Order History & Order Details
+
+Authenticated customers can access:
+
+```http
+GET /api/orders
+GET /api/orders/:id
+```
+
+The order system provides:
+
+* Order history
+* Order details
+* Order items
+* Historical prices
+* Order totals
+* Order lifecycle status
+* Delivery estimate
+* Payment method/status
+* Cancellation information
+* Loading/error/empty states
+
+### Ownership protection
+
+The authenticated user ID comes from the verified JWT.
+
+The client cannot provide another user's ID to access their orders.
+
+Cross-user order access is rejected without revealing whether the resource belongs to another customer.
+
+---
+
+# 14. Historical Order Accuracy
+
+An order must remain historically correct even when a product changes later.
+
+For that reason:
+
+```text
+products.price
+       │
+       │ snapshot at purchase time
+       ▼
+order_items.unit_price
+```
+
+`order_items.unit_price` stores the price at the time the order was created.
+
+Therefore:
+
+* Product price changes do not alter old orders.
+* Historical totals remain accurate.
+* Order history does not depend on the current product price.
+
+All monetary values use PostgreSQL `NUMERIC(10,2)` rather than floating-point types.
+
+---
+
+# 15. Delivery Estimates
+
+The system calculates and persists an estimated delivery window during order creation.
+
+Current design:
+
+**7–14 Monday–Friday working days after order placement.**
+
+The dates are stored with the order rather than recalculated every time the order is viewed.
+
+This makes the historical order record deterministic and auditable.
+
+---
+
+# 16. Product Ratings
+
+The application also supports product rating functionality associated with completed/past purchases.
+
+The rating experience is integrated into the order-detail/product experience rather than treated as an unrelated standalone feature.
+
+This creates the foundation for purchase-based customer feedback while keeping the rating workflow connected to the order lifecycle.
+
+---
+
+# 17. Database Architecture
+
+The application uses PostgreSQL as its source of truth.
+
+### Core entities
+
+```text
+users
+  │
+  └──< orders
+          │
+          └──< order_items >── products
+```
+
+### Main tables
+
+* `users`
+* `products`
+* `orders`
+* `order_items`
+
+Additional fields support:
+
+* Order lifecycle
+* Delivery estimates
+* Payment metadata
+* Cancellation metadata
+* Product discovery
+* Product availability
+* Product metadata
+
+### Relationships
+
+```text
+users 1 ──────── N orders
+
+orders 1 ─────── N order_items
+
+products 1 ──── N order_items
+```
+
+Foreign keys protect historical relationships and prevent accidental destruction of order history.
+
+---
+
+# 18. Database Migrations & Seed Strategy
+
+Database initialization is designed to be **repeatable and non-destructive**.
+
+The project separates:
+
+* Base schema
+* Migrations
+* Seed data
+
+The database setup process:
+
+```text
+Schema
+  │
+  ▼
+Pending migrations
+  │
+  ▼
+Seed data when appropriate
+```
+
+Migrations are tracked so previously applied changes are not executed again.
+
+Seed data is only inserted when appropriate, preventing normal application restarts from overwriting developer changes.
+
+This makes the local environment reproducible while preserving persistent development data.
+
+---
+
+# 19. Backend Architecture
+
+The Express backend follows a layered structure:
+
+```text
+Request
+   │
+   ▼
+Route
+   │
+   ▼
+Controller
+   │
+   ▼
+Service
+   │
+   ▼
+PostgreSQL
+```
+
+Supporting layers include:
+
+* Authentication middleware
+* Error middleware
+* Configuration
+* Database access
+* Validation
+* Security middleware
+
+### Main backend areas
+
+```text
+backend/
+└── src/
+    ├── server.js
+    ├── config/
+    ├── routes/
+    ├── controllers/
+    ├── services/
+    └── middleware/
+```
+
+This separation prevents business logic from becoming tightly coupled to HTTP route definitions.
+
+---
+
+# 20. Frontend Architecture
+
+The frontend intentionally uses plain web technologies:
+
+```text
+HTML
+CSS
+Vanilla JavaScript
+```
+
+There is no React, Vue, Angular, or other frontend framework.
+
+Shared functionality is separated into reusable modules such as:
+
+```text
+frontend/js/
+├── app.js
+├── api.js
+├── cart.js
+├── cart-page.js
+├── products.js
+├── product-details.js
+├── login.js
+├── register.js
+├── orders.js
+└── order-details.js
+```
+
+### Responsibilities
+
+**`api.js`**
+
+Centralized backend communication.
+
+**`app.js`**
+
+Shared application/navigation behavior and authentication-aware UI.
+
+**`cart.js`**
+
+Centralized client-side cart state.
+
+**Page-specific modules**
+
+Handle rendering and interaction for individual application pages.
+
+The frontend uses safe DOM manipulation and treats all backend/client data as untrusted input.
+
+---
+
+# 21. API Design
+
+The backend exposes HTTP APIs for the application's core resources.
+
+### Health
+
+```http
+GET /api/health
+```
+
+### Authentication
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+### Products
+
+```http
+GET /api/products
+GET /api/products/:id
+```
+
+The product listing endpoint supports search, filtering, sorting, and cursor pagination.
+
+### Orders
+
+```http
+POST /api/orders
+GET  /api/orders
+GET  /api/orders/:id
+POST /api/orders/:id/cancel
+```
+
+The API maintains a consistent response/error model and separates authentication, authorization, validation, and business logic.
+
+---
+
+# 22. Validation & Error Handling
+
+Input validation is applied at API boundaries.
+
+Examples include:
+
+* Positive integer product IDs
+* Positive integer order IDs
+* Valid email addresses
+* Password requirements
+* Password confirmation
+* Non-empty order items
+* Positive quantities
+* Valid payment methods
+* Valid product filters
+* Valid pagination limits
+* Valid cursor values
+
+### HTTP error semantics
+
+```text
+400  Bad Request
+401  Unauthorized
+404  Not Found
+409  Conflict
+500  Internal Server Error
+```
+
+A centralized Express error middleware prevents implementation details, stack traces, and raw database errors from leaking to clients.
+
+---
+
+# 23. Security Engineering
+
+Security is treated as a cross-cutting concern rather than a final checklist.
+
+### Authentication
+
+* JWT authentication
+* HttpOnly cookies
+* Minimal JWT payload
+* Password hashing
+* Secure cookie configuration
+* Logout invalidation through cookie clearing
+
+### Authorization
+
+* Protected routes
+* Ownership enforcement
+* JWT-derived user identity
+* No client-controlled user IDs for protected resources
+
+### Database security
+
+* Parameterized SQL
+* No string-interpolated SQL
+* Transactional writes
+* Row-level locking
+* Foreign-key constraints
+
+### HTTP security
+
+* Helmet
+* Explicit CORS
+* Credentialed requests
+* No wildcard credentialed origins
+
+### Client security
+
+* No JWT in localStorage
+* No sensitive payment credentials
+* Cart treated as untrusted data
+* Backend revalidation before order creation
+
+The security hardening phase explicitly covers centralized errors, Helmet, validation, SQL injection prevention, authorization, cart validation, and secret auditing.
+
+---
+
+# 24. Testing Strategy
+
+Testing is part of the development workflow rather than an afterthought.
+
+The project uses **Jest** for automated testing.
+
+Tests are intended to cover important business behavior such as:
+
+* Authentication
+* Product APIs
+* Product search/filtering
+* Cursor pagination
+* Input validation
+* Order creation
+* Stock validation
+* Transaction rollback
+* Concurrent inventory access
+* Order ownership
+* Cancellation
+* Cancellation idempotency
+* Payment validation
+* Historical order integrity
+
+The testing strategy focuses particularly on **business invariants and failure paths**, not only successful requests.
+
+---
+
+# 25. Dockerized Development
+
+The project can be started as a complete local stack using Docker Compose.
+
+### Architecture
+
+```text
+                    Browser
+                       │
+                       ▼
+              ┌────────────────┐
+              │     Nginx      │
+              │   Frontend     │
+              │ Static + Proxy │
+              └───────┬────────┘
+                      │
+                      ▼
+              ┌────────────────┐
+              │    Express     │
+              │    Backend     │
+              └───────┬────────┘
+                      │
+                      ▼
+              ┌────────────────┐
+              │   PostgreSQL   │
+              │    Database    │
+              └───────┬────────┘
+                      │
+                      ▼
+              Persistent Volume
+```
+
+### Services
+
+* Frontend / Nginx
+* Backend / Node.js + Express
+* PostgreSQL
+* Database initialization process
+
+PostgreSQL is kept inside the Docker network by default, while the application communicates with it through the Compose service name rather than `localhost`.
+
+---
+
+# 26. Run with Docker
+
+### Requirements
+
+* Docker Desktop
+* Docker Compose v2
+
+### Start
+
+```bash
+git clone <repository-url>
+cd <project-directory>
+
+docker compose up -d
+```
+
+The first startup prepares the database, applies migrations, loads seed data where appropriate, and starts the application services.
+
+### Frontend
+
+```text
+http://localhost:8080
+```
+
+### Backend health check
+
+```text
+http://localhost:5000/api/health
+```
+
+### Stop
+
+```bash
+docker compose down
+```
+
+### Rebuild
+
+```bash
+docker compose up -d --build
+```
+
+### Reset local database
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+> **Warning:** `docker compose down -v` deletes the PostgreSQL volume and all local database data.
+
+The Docker setup uses a persistent named PostgreSQL volume so normal container shutdown does not destroy accounts, products, or orders.
+
+---
+
+# 27. Local Development Without Docker
+
+### Backend
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+### Frontend
+
+Serve `/frontend` with a static development server such as VS Code Live Server.
+
+### Database
+
+```bash
+cd backend
+npm run db:setup
+```
+
+The database setup process applies the schema, pending migrations, and seed data when appropriate.
+
+---
+
+# 28. Environment Configuration
+
+Secrets and environment-specific configuration are kept outside committed source code.
+
+Example:
+
+```env
+JWT_SECRET=your-long-random-secret
+JWT_EXPIRES_IN=1d
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=lax
+CORS_ORIGIN=http://localhost:5500
+```
+
+The repository contains environment templates such as:
+
+```text
+.env.example
+```
+
+Real `.env` files are excluded from Git.
+
+No credentials, JWT secrets, or sensitive payment information are embedded in frontend JavaScript.
+
+---
+
+# 29. Project Structure
+
+```text
 simple-ecommerce-store/
+│
 ├── frontend/
 │   ├── index.html
 │   ├── products.html
@@ -31,6 +1144,7 @@ simple-ecommerce-store/
 │   ├── register.html
 │   ├── orders.html
 │   ├── order-details.html
+│   │
 │   ├── css/
 │   │   ├── style.css
 │   │   ├── products.css
@@ -38,6 +1152,7 @@ simple-ecommerce-store/
 │   │   ├── cart.css
 │   │   ├── auth.css
 │   │   └── orders.css
+│   │
 │   ├── js/
 │   │   ├── app.js
 │   │   ├── api.js
@@ -49,817 +1164,359 @@ simple-ecommerce-store/
 │   │   ├── register.js
 │   │   ├── orders.js
 │   │   └── order-details.js
+│   │
 │   └── assets/
-│       └── images/
+│
 ├── backend/
 │   ├── src/
 │   │   ├── server.js
 │   │   ├── config/
-│   │   │   └── database.js
 │   │   ├── routes/
-│   │   │   ├── health.routes.js
-│   │   │   ├── product.routes.js
-│   │   │   ├── auth.routes.js
-│   │   │   └── order.routes.js
 │   │   ├── controllers/
-│   │   │   ├── health.controller.js
-│   │   │   ├── product.controller.js
-│   │   │   ├── auth.controller.js
-│   │   │   └── order.controller.js
 │   │   ├── services/
-│   │   │   ├── health.service.js
-│   │   │   ├── product.service.js
-│   │   │   ├── auth.service.js
-│   │   │   └── order.service.js
 │   │   └── middleware/
-│   │       ├── error.middleware.js
-│   │       └── auth.middleware.js
+│   │
 │   ├── database/
 │   │   ├── schema.sql
+│   │   ├── migrations/
 │   │   └── seed.sql
-│   ├── .env
-│   ├── .env.example
-│   ├── .gitignore
-│   └── package.json
+│   │
+│   ├── docs/
+│   ├── tests/
+│   ├── scripts/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── .env.example
+│
+├── docker-compose.yml
+├── frontend/nginx.conf
+├── .dockerignore
 ├── .gitignore
 └── README.md
 ```
 
-## Docker Setup (One Command)
+The exact structure may evolve as additional engineering concerns are introduced; the architectural principle remains separation of responsibilities rather than putting application logic into a single large file.
 
-The quickest way to run the whole application — frontend, backend and PostgreSQL —
-without installing Node.js or PostgreSQL on your machine.
+---
 
-### Prerequisites
+# 30. Engineering Principles
 
-- Docker Desktop (or Docker Engine + Docker Compose v2)
+The project follows several principles throughout development.
 
-### Clone
+### Server authority
 
-```bash
-git clone <repository-url>
-cd <project-directory>
-```
-
-### Environment (optional)
-
-```bash
-cp .env.example .env
-```
-
-The committed defaults already work for local development, so this step is optional.
-Copy the file only if you want to change ports, credentials or secrets.
-
-### Start
-
-```bash
-docker compose up -d
-```
-
-On the first run Compose builds the two images, starts PostgreSQL, creates the
-database schema, applies the migrations and loads the seed products, then starts the
-backend and the frontend. Later runs reuse the existing database volume and skip the
-seed step, so product edits made locally are not overwritten.
-
-### Open
-
-Frontend:
-
-```
-http://localhost:8080
-```
-
-Backend API (health check):
-
-```
-http://localhost:5000/api/health
-```
-
-### Docker Architecture
+The browser is never trusted with authoritative business values.
 
 ```text
-        Browser
-           │
-           │  http://localhost:8080
-           ▼
-   ┌───────────────────┐
-   │  Frontend         │   nginx:alpine
-   │  (static files)   │   serves frontend/ + proxies /api → backend:5000
-   └─────────┬─────────┘
-             │
-             │  http://localhost:5000  (API calls from the page)
-             ▼
-   ┌───────────────────┐
-   │  Backend          │   node:20-alpine
-   │  Express + pg     │   DB_HOST=postgres
-   └─────────┬─────────┘
-             │
-             │  postgres:5432  (Compose network only)
-             ▼
-   ┌───────────────────┐
-   │  PostgreSQL       │   postgres:16-alpine
-   └─────────┬─────────┘
-             │
-             ▼
-   ┌───────────────────┐
-   │  postgres_data    │   named Docker volume
-   │  (persistent)     │   survives `docker compose down`
-   └───────────────────┘
+Client → intent
+Server → decision
+Database → source of truth
 ```
 
-Notes on the architecture:
+### Separation of concerns
 
-- **PostgreSQL is not published to the host.** The backend reaches it as
-  `postgres:5432` over the Compose network. See *Connecting to PostgreSQL* below if
-  you want a host connection for a SQL client.
-- **A `db-init` service** prepares the database before the backend starts. It runs
-  `npm run db:setup`, which applies `database/schema.sql` (only if the core tables are
-  missing), then the migrations (which skip files already applied), then the seed —
-  but **only when the products table is empty**, so restarting the stack never
-  overwrites product edits. The whole script is idempotent and never drops, truncates
-  or deletes data. The service exits after finishing, which is expected — `Exited (0)`
-  for `db-init` is not a failure.
-- **The frontend image also proxies `/api`** to the backend, so the same origin can be
-  used if you prefer. The page's API base URL is derived from the browser's hostname
-  and port 5000, which is why the backend port is published as well.
+Routes should not contain business logic.
 
-### Stop
-
-```bash
-docker compose down
+```text
+Route
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Database
 ```
 
-Containers are removed. The database volume is kept.
+### Atomicity
 
-### Rebuild
+Operations that modify related pieces of business state should succeed or fail together.
 
-Needed after changing a Dockerfile, adding a dependency, or changing any
-frontend/backend source file:
+### Explicit validation
 
-```bash
-docker compose up -d --build
+Invalid data is rejected at the system boundary.
+
+### Secure by default
+
+Authentication, authorization, secrets, cookies, CORS, SQL queries, and error responses are designed with security in mind.
+
+### Maintainability
+
+Features are implemented in isolated layers and documented so future changes do not require rewriting unrelated functionality.
+
+### Scalability
+
+The implementation avoids unnecessarily coupling frontend state to backend persistence and avoids inefficient application-side filtering when the database can perform the operation.
+
+### Observability and auditability
+
+Important business events such as order creation and cancellation preserve enough historical state to understand what happened later.
+
+---
+
+# 31. Documentation
+
+Documentation is treated as part of the engineering process.
+
+The project maintains documentation for:
+
+* API contracts
+* Product search architecture
+* Implementation phases
+* Database behavior
+* Docker setup
+* Authentication
+* Order lifecycle
+* Testing
+* Security decisions
+* Development workflow
+
+The purpose is to make the project understandable not only to its original author, but also to another developer who needs to inspect, maintain, debug, or extend it.
+
+---
+
+# 32. Development Approach
+
+The application was developed incrementally rather than as one large implementation.
+
+A typical feature lifecycle is:
+
+```text
+Requirement
+    ↓
+Architecture / design
+    ↓
+Database considerations
+    ↓
+Backend implementation
+    ↓
+Frontend integration
+    ↓
+Validation
+    ↓
+Testing
+    ↓
+Security review
+    ↓
+Documentation
+    ↓
+Integration
 ```
 
-### Reset the local database
+This approach helps prevent the common problem of implementing UI first and discovering later that the backend cannot safely support the intended business behavior.
 
-```bash
-docker compose down -v
-docker compose up -d
+---
+
+# 33. Current Implementation Scope
+
+The application currently covers the major e-commerce workflow:
+
+```text
+User
+ │
+ ├── Register / Login
+ │
+ ▼
+Product Discovery
+ │
+ ├── Search
+ ├── Filter
+ ├── Sort
+ └── Cursor Pagination
+ │
+ ▼
+Product Details
+ │
+ ▼
+Shopping Cart
+ │
+ ▼
+Checkout
+ │
+ ├── Payment Method
+ └── Shipping Information
+ │
+ ▼
+Order Creation
+ │
+ ├── Validate Stock
+ ├── Lock Inventory
+ ├── Calculate Price
+ ├── Create Order
+ └── Decrease Stock
+ │
+ ▼
+Order History
+ │
+ ▼
+Order Details
+ │
+ ├── Lifecycle
+ ├── Delivery Estimate
+ ├── Payment Status
+ └── Cancellation
+ │
+ ▼
+Product Rating
 ```
 
-> **Warning:** `docker compose down -v` deletes the `postgres_data` volume and
-> **destroys all local database data**, including any accounts and orders you created.
-> Only run this when you intentionally want a clean database.
+---
 
-### Troubleshooting
+# 34. Important Business Invariants
 
-**Port already in use.** Change the host-side ports in `.env`:
+The following rules are intentionally enforced by the system.
 
-```env
-FRONTEND_PORT=8081
-BACKEND_PORT=5001
-```
+### Pricing
 
-Then update `CORS_ORIGIN` in the same file to use `8081`/`5001`, and run
-`docker compose up -d` again. Only the host side changes; the containers keep their
-internal ports, so no other file needs editing.
+> The client cannot decide the final order price.
 
-**Containers not starting.** Inspect what happened:
+### Inventory
 
-```bash
-docker compose ps
-docker compose logs
-docker compose logs backend
-```
+> An order cannot consume more stock than currently exists.
 
-**Backend is restarting or reports a database error.** PostgreSQL may not be ready
-yet. The Compose file already waits for `pg_isready` and for `db-init` to finish, so
-this usually resolves itself; `docker compose logs db-init` shows whether schema and
-migrations applied cleanly.
+### Authentication
 
-**Configuration changed but nothing happened.** Rebuild:
+> Authentication state is controlled by the server-side JWT cookie.
 
-```bash
-docker compose up -d --build
-```
+### Authorization
 
-**Database looks wrong.** Reset it with the warning above:
+> A customer can access only their own protected order resources.
 
-```bash
-docker compose down -v
-docker compose up -d
-```
+### Order history
 
-**Connecting to PostgreSQL from a host SQL client** (DBeaver, psql). The port is not
-published by default. Add a mapping to the `postgres` service in `docker-compose.yml`:
+> Historical order prices do not change when product prices change.
 
-```yaml
-    ports:
-      - "5432:5432"
-```
+### Cancellation
 
-Then connect to `localhost:5432` with the `POSTGRES_USER` / `POSTGRES_PASSWORD` from
-your `.env`. This is for local development only.
+> Cancellation restores inventory atomically and does not delete historical order records.
 
-## Local Setup
+### Payment
 
-### Backend
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-The backend will start on `http://localhost:5000`.
-
-### Frontend
-
-Serve the `/frontend` folder using a local development server such as VS Code Live Server (or any static file server).
-
-Open `http://localhost:5500` (or the port Live Server assigns).
-
-This is the no-Docker path. If you just cloned the repository and want everything in
-one step, use [Docker Setup](#docker-setup-one-command) instead.
+> The application does not claim that a real payment has been processed.
 
 ### Database
 
-The backend expects the schema to exist before it starts. For a fresh local database:
-
-```bash
-npm run db:setup
-```
-
-That applies `database/schema.sql` if the core tables are missing, then any migrations
-that have not been applied yet, then the seed data **only if the products table is
-empty**. Each step skips work that is already done, so it is safe to re-run and it
-will not overwrite product edits. It is the same command the Docker `db-init` service
-runs.
-
-## Environment Variables
-
-Copy `backend/.env.example` to `backend/.env` and fill in your local PostgreSQL configuration:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-**Do NOT commit `backend/.env`.** The `.gitignore` already excludes it.
-
-## Database
-
-Database:
-- PostgreSQL
-
-Database name:
-- simpleEcommerce
-
-Host / Port:
-- localhost:5432
-
-Tables:
-- users
-- products
-- orders
-- order_items
-
-### Relationships
-
-- One user can have many orders (`users.id` → `orders.user_id`)
-- One order can contain many order items (`orders.id` → `order_items.order_id`)
-- One product can appear in many order items (`products.id` → `order_items.product_id`)
-
-### Foreign Key Behavior
-
-Foreign keys use `ON DELETE RESTRICT` for historical relationships (`orders`, `order_items`) to prevent accidental destruction of order history when a user or product is deleted. `ON UPDATE CASCADE` keeps referenced IDs in sync if primary keys change.
-
-### Price Snapshot
-
-`order_items.unit_price` stores the product price at the time the order was created, so historical orders remain accurate even if product prices change later.
-
-### Money Handling
-
-All monetary fields (`price`, `total_amount`, `unit_price`, `subtotal`) use `NUMERIC(10,2)`. No floating-point types are used.
-
-### Schema Setup
-
-1. Open DBeaver.
-2. Connect to local PostgreSQL.
-3. Select the `simpleEcommerce` database.
-4. Open `backend/database/schema.sql`.
-5. Execute the schema.
-6. Open `backend/database/seed.sql`.
-7. Execute the seed data.
-8. Verify the `products` table contains 12 sample products.
-
-## API
-
-### Health Check
-
-```http
-GET /api/health
-```
-
-Returns:
-
-```json
-{
-  "success": true,
-  "message": "API is healthy",
-  "database": "connected"
-}
-```
-
-### Get All Products
-
-```http
-GET /api/products
-```
-
-Returns all products from the `products` table ordered by `id ASC`.
-
-Success response (`200 OK`):
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": 1,
-      "name": "Wireless Mouse",
-      "description": "A simple wireless mouse.",
-      "price": 25.99,
-      "image_url": "https://example.com/images/wireless-mouse.jpg",
-      "stock_quantity": 25
-    }
-  ]
-}
-```
-
-An empty list returns `200 OK` with `"data": []`.
-
-### Get Product by ID
-
-```http
-GET /api/products/:id
-```
-
-Success response (`200 OK`):
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "Wireless Mouse",
-    "description": "A simple wireless mouse.",
-    "price": 25.99,
-    "image_url": "https://example.com/images/wireless-mouse.jpg",
-    "stock_quantity": 25
-  }
-}
-```
-
-### Error Responses
-
-Invalid product ID (`400 Bad Request`):
-
-```json
-{
-  "success": false,
-  "message": "Invalid product ID"
-}
-```
-
-Product not found (`404 Not Found`):
-
-```json
-{
-  "success": false,
-  "message": "Product not found"
-}
-```
-
-Unexpected server/database error (`500 Internal Server Error`):
-
-```json
-{
-  "success": false,
-  "message": "Internal server error"
-}
-```
-
-### Product Discovery Querying
-
-`GET /api/products` remains the active product listing endpoint and now supports the PostgreSQL-backed discovery pipeline. Query parameters are `q`, `category`, `brand`, `subcategory`, `featured`, `sale`, `min_price`, `max_price`, `in_stock`, `sort`, `limit`, and `cursor`.
-
-Search terms are case-insensitive substring matches against product name, SKU, brand, category, subcategory, description, and short description. Terms are combined with AND semantics. Filters compose in one query. The default sort remains `id_asc`; supported sort values are `id_asc`, `newest`, `oldest`, `price_asc`, `price_desc`, `name_asc`, `name_desc`, and `featured`. `limit` defaults to 20 and is limited to 100.
-
-The response preserves the existing `success` and `data` fields and adds:
-
-```json
-{
-  "pagination": {
-    "limit": 20,
-    "hasNextPage": true,
-    "nextCursor": "opaque-cursor"
-  }
-}
-```
-
-The cursor is a signed, query-context-bound keyset cursor. Reuse it only with the same filters and sort. Empty matches return `200` with an empty `data` array. The full OpenAPI contract is in `backend/docs/openapi.yaml`, and the design handoff is in `backend/docs/product-search-phase-01.md`.
-
-## Phase 04 — Product Frontend
-
-### Products Page
-
-`products.html` displays a responsive grid of product cards. Each card is rendered dynamically from `GET /api/products` and shows:
-
-- Product image (with fallback for broken images)
-- Product name
-- Short description
-- Price (formatted as `$XX.XX`)
-- Stock status (`In stock: N` or `Out of stock`)
-- "View Details" button linking to `product-details.html?id=<id>`
-
-### Product Details Page
-
-`product-details.html?id=<id>` reads the product ID from the URL query string and renders full product information from `GET /api/products/:id`. The page displays:
-
-- Product image
-- Product name
-- Full description
-- Price
-- Stock quantity with availability status
-- "Add to Cart" button (disabled — cart functionality is not yet implemented)
-- "Back to Products" link
-
-### Frontend API Integration
-
-`frontend/js/api.js` centralizes the backend base URL and provides:
-
-```js
-getProducts()
-getProductById(id)
-```
-
-These functions handle HTTP status codes and return the JSON response from the backend.
-
-### States
-
-- **Loading:** spinner shown while the API request is in progress
-- **Error:** user-friendly message with a "Retry" button if the API request fails
-- **Empty:** "No products available" shown when the API returns an empty array
-- **Not found:** "Product not found" shown when a product ID returns 404
-- **Invalid:** "Invalid product" shown when the URL contains no valid product ID
-
-### API Endpoints Used
-
-```http
-GET /api/products
-GET /api/products/:id
-```
-
-## Current Status
-
-## Authentication
-
-The application uses **JWT + HttpOnly Cookie** authentication.
-
-### Security
-
-- Passwords are hashed with `bcryptjs` (10 rounds). Plain-text passwords are never stored.
-- The JWT secret comes from the `JWT_SECRET` environment variable.
-- The JWT is stored in an `HttpOnly` cookie and is **not** accessible to frontend JavaScript.
-- The JWT is **not** stored in `localStorage` or `sessionStorage`.
-- The cookie uses `SameSite=Lax` and `Secure=true` in production (disabled for local HTTP development).
-- CORS uses an explicit frontend origin with `credentials: true`.
-
-### Environment Variables
-
-```env
-JWT_SECRET=your-long-random-secret
-JWT_EXPIRES_IN=1d
-COOKIE_SECURE=false
-COOKIE_SAME_SITE=lax
-FRONTEND_URL=http://localhost:5500
-```
-
-Do not commit the real `JWT_SECRET`.
-
-### API Endpoints
-
-| Method | Endpoint             | Auth Required | Purpose              |
-| ------ | -------------------- | ------------: | -------------------- |
-| POST   | `/api/auth/register` |            No | Register a new user  |
-| POST   | `/api/auth/login`    |            No | Login user           |
-| POST   | `/api/auth/logout`   |            No | Clear auth cookie    |
-| GET    | `/api/auth/me`       |           Yes | Get current user     |
-
-### Authentication Flow
-
-1. User registers or logs in via the frontend.
-2. Backend validates input, hashes/verifies the password with bcrypt, and creates a JWT.
-3. The JWT is returned only as an `HttpOnly` cookie — never in the JSON body.
-4. On subsequent requests, the browser automatically attaches the cookie.
-5. Protected routes verify the JWT via `auth.middleware.js` and attach `req.userId`.
-
-## Current Status
-
-## Shopping Cart
-
-The cart is implemented with **Vanilla JavaScript** and stored in browser `localStorage`.
-
-### Key design decisions
-
-- **No PostgreSQL cart table.** The cart is client-side only.
-- **No cart API endpoints.** The cart never talks to the backend.
-- **Only `productId` and `quantity` are persisted** — never prices.
-- **Product prices always come from the backend API**, so displayed prices stay current.
-- **The browser is not trusted.** Phase 07 will re-fetch products, verify current prices, and check stock before creating an order.
-
-### Cart data format
-
-```json
-[
-  { "productId": 1, "quantity": 2 },
-  { "productId": 5, "quantity": 1 }
-}
-```
-
-### Cart page
-
-`/cart.html` displays cart items with quantity controls, subtotals, and a summary. The checkout button is disabled (order processing belongs to Phase 07).
-
-### Cart modules
-
-- `frontend/js/cart.js` — centralized cart state management
-- `frontend/js/cart-page.js` — cart page rendering and interactions
-- Product pages (`products.html`, `product-details.html`) include Add to Cart buttons
-
-### Cart count
-
-The navigation displays the total number of units (e.g. `Cart (5)`). The count updates after add, increase, decrease, remove, and clear.
-
-## Current Status
-
-Phase 06 implements the shopping cart:
-
-- `localStorage`-based cart with `productId` + `quantity` only
-- Add, increase, decrease, remove, clear, and count
-- Same-product merges into one cart item
-- Stock-aware UI (out-of-stock disabled, stock limit enforced)
-- Cart page with item subtotals and summary
-- Add to Cart on products and product details pages
-- Navigation cart count
-- Malformed localStorage handled safely
-- JWT remains in HttpOnly cookie only — never in localStorage
-
-## Order Processing
-
-### Endpoint
-
-```http
-POST /api/orders
-```
-
-Authentication: **Required** (JWT via HttpOnly cookie).
-
-### Request body
-
-```json
-{
-  "items": [
-    { "productId": 1, "quantity": 2 },
-    { "productId": 5, "quantity": 1 }
-  ],
-  "payment": {
-    "method": "CASH_ON_DELIVERY",
-    "provider": null
-  }
-}
-```
-
-Only `productId` and `quantity` are sent for products. The browser never sends price, subtotal, or total. Payment selection is optional for backward compatibility and defaults to `CASH_ON_DELIVERY`; supported methods are `CASH_ON_DELIVERY`, `CARD`, and `MOBILE_BANKING` with validated safe providers. No card numbers, CVV, PINs, OTPs, or payment secrets are accepted or stored.
-
-### Server-side authority
-
-The backend re-reads every product from PostgreSQL and:
-
-1. Validates product existence
-2. Validates stock (requested quantity <= current stock)
-3. Locks product rows with `FOR UPDATE`
-4. Calculates `subtotal = current_price × quantity`
-5. Calculates `total_amount = SUM(subtotals)`
-6. Calculates and stores the 7–14 working-day delivery window
-7. Creates the order with validated payment metadata
-8. Creates order items
-9. Decrements stock
-10. Commits the transaction
-
-All of this runs inside **one PostgreSQL transaction**. If any step fails, everything rolls back.
-
-### Transaction strategy
-
-```sql
-BEGIN
-  → SELECT ... FROM products WHERE id = ANY($1) ORDER BY id ASC FOR UPDATE
-  → validate existence, stock, and payment selection
-  → calculate totals and 7–14 working-day delivery window
-  → INSERT INTO orders (lifecycle, delivery, payment metadata)
-  → INSERT INTO order_items (× N)
-  → UPDATE products SET stock_quantity = stock_quantity - $1
-COMMIT
-```
-
-A single pooled client is used for the entire transaction. On failure, `ROLLBACK` runs and the client is released.
-
-### Authentication integration
-
-`req.userId` comes from the verified JWT in `auth.middleware.js`. The client cannot supply a different `userId`.
-
-### Frontend checkout flow
-
-1. User clicks "Place Order" on the cart page
-2. Frontend checks `/api/auth/me` — unauthenticated users are prompted to log in
-3. Frontend sends only `{ items: [{ productId, quantity }] }` with `credentials: 'include'`
-4. On success (201), the localStorage cart is cleared and a confirmation is shown
-5. On failure (400/404/409/401/500), the cart is preserved and a useful message is shown
-
-### Important architecture
-
-```text
-Browser Cart (productId + quantity only)
-        ↓
-Authenticated Order API
-        ↓
-PostgreSQL
-        ↓
-Authoritative price + stock
-        ↓
-Transaction
-        ↓
-Order + Order Items + Stock decrement
-```
-
-## Current Status
-
-Phase 07 implements order processing:
-
-- `POST /api/orders` protected by auth middleware
-- Server-side product lookup with row locking (`FOR UPDATE`)
-- Stock validation (409 on insufficient stock)
-- Authoritative price calculation (browser prices/totals ignored)
-- Duplicate product IDs merged before processing
-- Single PostgreSQL transaction with BEGIN/COMMIT/ROLLBACK
-- Stock never goes negative (concurrency-safe via row locking)
-- Frontend checkout with auth check and cart clearing only on success
-
-## Order Lifecycle and Customer Cancellation
-
-Orders use lower-case lifecycle states: `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `completed`, and `cancelled`. New orders remain `confirmed` for compatibility. Customers can cancel `pending`, `confirmed`, and `processing` orders; `shipped`, `delivered`, `completed`, and `cancelled` are not cancellable. The backend enforces these rules.
-
-### Cancel an order
-
-```http
-POST /api/orders/:id/cancel
-```
-
-Authentication is required. An optional `reason` is limited to 500 characters. The endpoint locks the authenticated customer's order, locks affected products, restores each recorded order-item quantity exactly once, records cancellation metadata, and commits all changes atomically. Repeated and concurrent requests are idempotent. The order and its historical items remain in the database.
-
-Cancellation sets `status = 'cancelled'`, `cancelled_at`, `cancelled_by_user_id`, and `cancellation_reason` when supplied. A `PENDING` payment status becomes `CANCELLED`; no refund or payment capture is claimed.
-
-## Order History
-
-### Endpoints
-
-```http
-GET /api/orders
-GET /api/orders/:id
-```
-
-Both require authentication (JWT via HttpOnly cookie).
-
-### Security
-
-- The authenticated user ID comes **only** from the verified JWT.
-- The client cannot supply a `userId` to filter orders.
-- `GET /api/orders` returns only the current user's orders.
-- `GET /api/orders/:id` enforces `order.id = $1 AND order.user_id = $2`.
-- Cross-user access returns `404` (does not reveal another user's order exists).
-- Invalid order IDs return `400`.
-- SQL is parameterized.
-
-### Historical accuracy
-
-- `order_items.unit_price` stores the price at purchase time.
-- Historical orders show the stored `unit_price`, not the current `products.price`.
-- The stored `orders.total_amount` is the authoritative historical total.
-
-### Lifecycle fields
-
-- `createdAt` remains the original placement timestamp.
-- `estimatedDeliveryFrom` and `estimatedDeliveryTo` persist the 7th and 14th Monday–Friday working days after placement; they are not recalculated on reads.
-- `paymentMethod`, `paymentStatus`, and `paymentProvider` contain only safe selection metadata.
-- `cancelledAt`, `cancelledByUserId`, and `cancellationReason` are populated only for cancelled orders.
-- Cancelled orders remain visible in order history and order detail responses.
-
-### Frontend
-
-- `frontend/orders.html` — order history list (newest first)
-- `frontend/order-details.html?id=<id>` — order details with items
-- Loading, empty, and error states
-- Orders link appears in navigation only for authenticated users
-- Unauthenticated visitors are prompted to log in
-
-## Validation & Security
-
-### Input validation
-
-- Product IDs must be positive integers (`abc`, `1.5`, `0`, `-1` → 400)
-- Order IDs must be positive integers
-- Registration validates name, email format, password length, and confirmation
-- Order items must be a non-empty array of `{ productId, quantity }` with positive integers
-- Duplicate product IDs are merged before processing
-- Invalid input returns `400` with a consistent error shape
-
-### Centralized error handling
-
-A single Express error middleware handles all errors:
-
-- `400` → invalid input
-- `401` → unauthenticated
-- `404` → resource not found
-- `409` → conflict (duplicate email, insufficient stock)
-- `500` → unexpected server error
-
-Stack traces and raw PostgreSQL errors are never exposed to clients. They are logged server-side only.
-
-### SQL injection prevention
-
-All database queries use parameterized statements (`$1`, `$2`, ...). No SQL is constructed via string interpolation. The existing PostgreSQL transaction architecture is preserved.
-
-### Authentication & cookie security
-
-- JWT is stored only in an `HttpOnly` cookie
-- JWT is never stored in `localStorage` or `sessionStorage`
-- JWT is never returned in API responses
-- JWT payload is minimal (`{ sub: userId }`)
-- Cookie uses `SameSite=Lax`, `Secure` toggled via `COOKIE_SECURE` env var
-- Logout properly clears the auth cookie
-- Invalid/expired tokens return `401`
-
-### CORS
-
-- Frontend origin is explicitly configured via `CORS_ORIGIN`
-- `127.0.0.1` and `localhost` variants are both allowed
-- `credentials: true` is enabled (required for cookies)
-- Wildcard origins are not used with credentialed requests
-
-### Security headers
-
-`helmet` is used to set basic security headers (`x-content-type-options`, `x-frame-options`, etc.) without affecting the API contract.
-
-### Authorization / ownership
-
-- `GET /api/orders` returns only the current user's orders (user ID from JWT)
-- `GET /api/orders/:id` enforces `order.id = $1 AND order.user_id = $2`
-- Cross-user access returns a safe `404`
-- The client cannot choose `userId`, `price`, `subtotal`, or `totalAmount`
-
-### Order transaction integrity
-
-- Stock validation occurs inside the transaction with `FOR UPDATE` row locking
-- Order creation, order items, and stock updates use one transaction
-- Failures trigger `ROLLBACK`
-- The database client is always released
-- The cart is cleared only after successful order creation on the frontend
-
-### localStorage cart
-
-The cart is treated as untrusted client data:
-
-- Malformed JSON is handled safely
-- Invalid product IDs and quantities are rejected
-- Stored prices and totals are never trusted
-- The backend re-validates product IDs, prices, and stock during order creation
-
-### Secrets
-
-- `.env` is ignored by Git
-- `.env.example` contains placeholders only
-- No secrets are hard-coded in source
-- No credentials or tokens are included in frontend JavaScript
-
-## Current Status
-
-Phase 09 hardens the existing application:
-
-- Centralized error middleware that never exposes stack traces
-- `helmet` security headers
-- Input validation on all endpoints (product IDs, order IDs, auth fields, order items)
-- SQL injection prevention via parameterized queries
-- Authenticated ownership enforcement on order retrieval
-- Untrusted localStorage cart handling
-- Secrets audit — no credentials exposed
-- All Phase 01–08 functionality remains intact
+> Related order and inventory changes are committed atomically.
+
+These invariants are more important than any individual frontend implementation detail because they protect the integrity of the business system.
+
+---
+
+# 35. What This Project Is Designed to Show
+
+This project is intentionally more than a basic CRUD demonstration.
+
+It demonstrates practical understanding of:
+
+* Full-stack application architecture
+* REST API development
+* Relational database design
+* Authentication
+* Authorization
+* Secure cookies
+* Input validation
+* SQL safety
+* Transactions
+* Concurrency control
+* Inventory management
+* Historical data modeling
+* Cursor pagination
+* Search architecture
+* Client/server responsibility boundaries
+* Error handling
+* Automated testing
+* Docker
+* Nginx
+* Database migrations
+* Seed management
+* Documentation
+* Maintainable code organization
+
+The most important design principle throughout the project is:
+
+> **The UI may be convenient, but the backend and database must remain authoritative.**
+
+---
+
+# 36. Project Status
+
+The project is in the final integration/documentation stage.
+
+The implementation has progressed through feature-focused phases covering:
+
+* Application foundation
+* Product catalog
+* Authentication
+* Product discovery
+* Shopping cart
+* Checkout
+* Transaction-safe order processing
+* Order lifecycle
+* Cancellation
+* Order history
+* Payment experience
+* Ratings
+* Security hardening
+* Dockerization
+* Testing
+* Integration
+* Documentation
+
+The current focus is ensuring that these features work together as one coherent application rather than treating them as isolated assignment features.
+
+---
+
+# 37. Final Perspective
+
+**Simple E-commerce Store** started from a small internship specification, but the implementation intentionally applies the mindset used when building real software systems.
+
+Instead of asking only:
+
+> "Does the feature work?"
+
+the project asks:
+
+* What happens when two users buy the last item simultaneously?
+* Can a client manipulate the order price?
+* Can one customer access another customer's order?
+* What happens when an order cancellation is repeated?
+* What happens if a database operation fails halfway through checkout?
+* Can historical orders change when product prices change?
+* Can search scale beyond loading the entire catalog?
+* Can the application be reproduced on another developer's machine?
+* Can the database evolve safely through migrations?
+* Can another developer understand the architecture?
+* Can the system be tested without relying entirely on manual browser testing?
+* Are secrets and sensitive payment information protected?
+
+That engineering mindset is the central purpose of the project.
+
+---
+
+## Technology Summary
+
+| Area               | Technology / Approach                    |
+| ------------------ | ---------------------------------------- |
+| Frontend           | HTML, CSS, Vanilla JavaScript            |
+| Backend            | Node.js, Express.js                      |
+| Database           | PostgreSQL                               |
+| Authentication     | JWT + HttpOnly Cookie                    |
+| Password Security  | bcrypt                                   |
+| API Security       | Helmet, CORS, validation                 |
+| Database Access    | Parameterized SQL                        |
+| Transactions       | PostgreSQL transactions + `FOR UPDATE`   |
+| Search             | PostgreSQL-backed search                 |
+| Pagination         | Cursor / keyset pagination               |
+| State              | Vanilla JS + localStorage cart           |
+| Testing            | Jest                                     |
+| Web Server         | Nginx                                    |
+| Containers         | Docker + Docker Compose                  |
+| Database Evolution | Schema + migrations                      |
+| Initial Data       | Seed scripts                             |
+| Documentation      | API + architecture + implementation docs |
+
+---
+
+## License
+
+This project was created for educational and internship purposes as part of the **CodeAlpha Full Stack Software Development Internship — Task 1**.  
+Design and Developed by **Showrav Kormokar**
