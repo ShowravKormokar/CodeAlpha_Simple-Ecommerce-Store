@@ -9,6 +9,8 @@ The original task was intentionally simple:
 This implementation goes beyond the minimum assignment requirements by applying **production-oriented software engineering practices** around authentication, authorization, transactional order processing, inventory consistency, product discovery, payment-flow design, order lifecycle management, validation, security, testing, Dockerized development, database migrations, seed management, and technical documentation.
 
 The goal is not only to demonstrate that the application works, but to demonstrate **how a maintainable, secure, testable, and scalable full-stack system can be designed and evolved**.
+---  
+<img width="1672" height="941" alt="codealpha_internship" src="https://github.com/user-attachments/assets/22ae8683-bae6-48bd-97a3-cbb3b3fe7ab3" />
 
 ---
 
